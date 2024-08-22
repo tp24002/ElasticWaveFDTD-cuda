@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "cstdlib": "cpp",
+        "init.h": "c",
+        "struct.h": "c"
+    }
+}
