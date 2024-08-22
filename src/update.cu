@@ -8,9 +8,179 @@
 
 #include "../header/struct.h"
 
+__device__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  if(i < imax && j < jmax && k < kmax) {
+    aft->sa.Txxx[i][j][k] = (2. - ma.zetadx[i][j][k] * dif.dt) / (2. + ma.zetadx[i][j][k] * dif.dt) * bef->sa.Txxx[i][j][k]
+          + 2. * (ma.c11[i][j][k] * dif.dt + ma.xi11[i][j][k]) / (2. + ma.zetadx[i][j][k] * dif.dt) * (aft->va.Vx[i][j][k] - aft->va.Vx[i - 1][j][k]) / dif.dx 
+          - 2. * ma.xi11[i][j][k] / (2. + ma.zetadx[i][j][k] * dif.dt) * (bef->va.Vx[i][j][k] - bef->va.Vx[i - 1][j][k]) / dif.dx;
+
+    aft->sa.Txxy[i][j][k] = (2. - ma.zetady[i][j][k] * dif.dt) / (2. + ma.zetady[i][j][k] * dif.dt) * bef->sa.Txxy[i][j][k]
+          + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetady[i][j][k] * dif.dt) * (aft->va.Vy[i][j][k] - aft->va.Vy[i][j - 1][k]) / dif.dy
+          - 2. * ma.khi[i][j][k] / (2. + ma.zetady[i][j][k] * dif.dt) * (bef->va.Vy[i][j][k] - bef->va.Vy[i][j - 1][k]) / dif.dy;
+
+    aft->sa.Txxz[i][j][k] = (2. - ma.zetadz[i][j][k] * dif.dt) / (2. + ma.zetadz[i][j][k] * dif.dt) * bef->sa.Txxz[i][j][k]
+          + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetadz[i][j][k] * dif.dt) * (aft->va.Vz[i][j][k] - aft->va.Vz[i][j][k - 1]) / dif.dz
+          - 2. * ma.khi[i][j][k] / (2. + ma.zetadz[i][j][k] * dif.dt) * (bef->va.Vz[i][j][k] - bef->va.Vz[i][j][k - 1]) / dif.dz;
+  }
+}
+
+__device__ void TyyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+  
+  if(i < imax && j < jmax && k < kmax) {
+    aft->sa.Tyyx[i][j][k] = (2. - ma.zetadx[i][j][k] * dif.dt) / (2. + ma.zetadx[i][j][k] * dif.dt) * bef->sa.Tyyx[i][j][k]
+        + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetadx[i][j][k] * dif.dt) * (aft->va.Vx[i][j][k] - aft->va.Vx[i - 1][j][k]) / dif.dx
+        - 2. * ma.khi[i][j][k] / (2. + ma.zetadx[i][j][k] * dif.dt) * (bef->va.Vx[i][j][k] - bef->va.Vx[i - 1][j][k]) / dif.dx;
+
+    aft->sa.Tyyy[i][j][k] = (2. - ma.zetady[i][j][k] * dif.dt) / (2. + ma.zetady[i][j][k] * dif.dt) * bef->sa.Tyyy[i][j][k]
+        + 2. * (ma.c11[i][j][k] * dif.dt + ma.xi11[i][j][k]) / (2. + ma.zetady[i][j][k] * dif.dt) * (aft->va.Vy[i][j][k] - aft->va.Vy[i][j - 1][k]) / dif.dy
+        - 2. * ma.xi11[i][j][k] / (2. + ma.zetady[i][j][k] * dif.dt) * (bef->va.Vy[i][j][k] - bef->va.Vy[i][j - 1][k]) / dif.dy;
+
+    aft->sa.Tyyz[i][j][k] = (2. - ma.zetadz[i][j][k] * dif.dt) / (2. + ma.zetadz[i][j][k] * dif.dt) * bef->sa.Tyyz[i][j][k]
+        + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetadz[i][j][k] * dif.dt) * (aft->va.Vz[i][j][k] - aft->va.Vz[i][j][k - 1]) / dif.dz
+        - 2. * ma.khi[i][j][k] / (2. + ma.zetadz[i][j][k] * dif.dt)  * (bef->va.Vz[i][j][k] - bef->va.Vz[i][j][k - 1]) / dif.dz;
+  }
+}
+
+
+// T 0 padding
+__device__ void ZeroT_XY(BefAft *aft, int imax, int jmax, int kmax, char check) {
+  int j = blockIdx.x * blockDim.x + threadIdx.x;
+  int i = blockIdx.y * blockDim.y + threadIdx.y;
+  if(j > jmax || i > imax) {
+    return;
+  }
+  // if (j <= jmax && i <= imax && check == 'X') {
+  if(check == 'X') {
+    aft->sa.Txxx[i][j][0] = 0.;
+    aft->sa.Txxx[i][j][kmax] = 0.;
+    aft->sa.Txxy[i][j][0] = 0.;
+    aft->sa.Txxy[i][j][kmax] = 0.;
+    aft->sa.Txxz[i][j][0] = 0.;
+    aft->sa.Txxz[i][j][kmax] = 0.;
+  } else if(check == 'Y') {
+    aft->sa.Tyyx[i][j][0] = 0.;
+    aft->sa.Tyyx[i][j][kmax] = 0.;
+    aft->sa.Tyyy[i][j][0] = 0.;
+    aft->sa.Tyyy[i][j][kmax] = 0.;
+    aft->sa.Tyyz[i][j][0] = 0.;
+    aft->sa.Tyyz[i][j][kmax] = 0.;
+  } else if(check == 'Z') {
+    aft->sa.Tzzx[i][j][0] = 0.;
+    aft->sa.Tzzx[i][j][kmax] = 0.;
+    aft->sa.Tzzy[i][j][0] = 0.;
+    aft->sa.Tzzy[i][j][kmax] = 0.;
+    aft->sa.Tzzz[i][j][0] = 0.;
+    aft->sa.Tzzz[i][j][kmax] = 0.;
+  } else {
+    printf("Zero padding could not be achieved.(XY)");
+  }
+}
+
+__device__ void ZeroT_YZ(BefAft *aft, int imax, int jmax, int kmax, char check) {
+  int k = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  if(k < 1 || k > kmax - 1) {
+    return;
+  }
+  // if (k >= 1 && k <= kmax - 1 && j <= jmax) {
+  if(check == 'X') {
+    aft->sa.Txxx[0][j][k] = 0.;
+    aft->sa.Txxx[imax][j][k] = 0.;
+    aft->sa.Txxy[0][j][k] = 0.;
+    aft->sa.Txxy[imax][j][k] = 0.;
+    aft->sa.Txxz[0][j][k] = 0.;
+    aft->sa.Txxz[imax][j][k] = 0.;
+  } else if(check =='Y') {
+    aft->sa.Tyyx[0][j][k] = 0.;
+    aft->sa.Tyyx[imax][j][k] = 0.;
+    aft->sa.Tyyy[0][j][k] = 0.;
+    aft->sa.Tyyy[imax][j][k] = 0.;
+    aft->sa.Tyyz[0][j][k] = 0.;
+    aft->sa.Tyyz[imax][j][k] = 0.;
+  } else if(check == 'Z') {
+    aft->sa.Tzzx[0][j][k] = 0.;
+    aft->sa.Tzzx[imax][j][k] = 0.;
+    aft->sa.Tzzy[0][j][k] = 0.;
+    aft->sa.Tzzy[imax][j][k] = 0.;
+    aft->sa.Tzzz[0][j][k] = 0.;
+    aft->sa.Tzzz[imax][j][k] = 0.;
+  } else {
+    printf("Zero padding could not be achieved.(YZ)");
+  }
+}
+
+__device__ void ZeroT_ZX(BefAft *aft, int imax, int jmax, int kmax, char check) {
+  int k = blockIdx.x * blockDim.x + threadIdx.x;
+  int i = blockIdx.y * blockDim.y + threadIdx.y;
+  if(k < 1 || k > kmax - 1 || i < 1 || i > imax - 1) {
+    return;
+  }
+  // if (k >= 1 && k <= Txxkmax - 1 && i >= 1 && i <= Txximax - 1) {
+  if(check == 'X') {
+    aft->sa.Txxx[i][0][k] = 0.;
+    aft->sa.Txxx[i][jmax][k] = 0.;
+    aft->sa.Txxy[i][0][k] = 0.;
+    aft->sa.Txxy[i][jmax][k] = 0.;
+    aft->sa.Txxz[i][0][k] = 0.;
+    aft->sa.Txxz[i][jmax][k] = 0.;
+  } else if(check == 'Y') {
+    aft->sa.Tyyx[i][0][k] = 0.;
+    aft->sa.Tyyx[i][jmax][k] = 0.;
+    aft->sa.Tyyy[i][0][k] = 0.;
+    aft->sa.Tyyy[i][jmax][k] = 0.;
+    aft->sa.Tyyz[i][0][k] = 0.;
+    aft->sa.Tyyz[i][jmax][k] = 0.;
+  } else if(check == 'Z'){
+    aft->sa.Tzzx[i][0][k] = 0.;
+    aft->sa.Tzzx[i][jmax][k] = 0.;
+    aft->sa.Tzzy[i][0][k] = 0.;
+    aft->sa.Tzzy[i][jmax][k] = 0.;
+    aft->sa.Tzzz[i][0][k] = 0.;
+    aft->sa.Tzzz[i][jmax][k] = 0.;
+  } else {
+    printf("Zero padding could not be achieved.(ZX)");
+  }
+}
+
+__device__ void DirectionalAdd(BefAft *aft, Inpaluse ip, int imax, int jmax, int kmax, char check) {
+  // スレッドインデックスの計算
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+  if(i > imax || j > jmax || k > kmax) {
+    return;
+  }
+  // if (i <= imax && j <= jmax && k <= kmax) {
+  if(check == 'X') {
+    aft->sa.Txx[i][j][k] = aft->sa.Txxx[i][j][k] + aft->sa.Txxy[i][j][k] + aft->sa.Txxz[i][j][k] + ip.Txx[i][j][k];
+  } else if(check == 'Y') {
+    aft->sa.Tyy[i][j][k] = aft->sa.Tyyx[i][j][k] + aft->sa.Tyyy[i][j][k] + aft->sa.Tyyz[i][j][k] + ip.Tyy[i][j][k];
+  } else if(check == 'Z'){
+    aft->sa.Tzz[i][j][k] = aft->sa.Tzzx[i][j][k] + aft->sa.Tzzy[i][j][k] + aft->sa.Tzzz[i][j][k] + ip.Tzz[i][j][k];
+  } else {
+    printf("Direction could not be added.(vertical_T)");
+  }
+}
+
 __device__ void Txx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
+  char check = 'X';
   int i, j, k;
   int Txximax = sr.Txx.x, Txxjmax = sr.Txx.y, Txxkmax = sr.Txx.z;
+  dim3 threadsPerBlock(16, 16, 16);  // ブロック内のスレッド数
+  dim3 UpdateBlocks((Txximax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Txxjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Txxkmax - 1 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroXYBlocks(    (Txxjmax + threadsPerBlock.x - 1) / threadsPerBlock.x,     (Txximax + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 ZeroYZBlocks((Txxkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,     (Txxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 ZeroZXBlocks((Txxkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txximax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 DirectionalAddBlocks((Txximax + threadsPerBlock.x) / threadsPerBlock.x, (Txxjmax + threadsPerBlock.y) / threadsPerBlock.y, (Txxkmax + threadsPerBlock.z) / threadsPerBlock.z);
   if (ip.mode == E_SINE) {
     ip.Txx[ip.in.x][ip.in.y][ip.in.z] = 0;
   } else if (ip.mode == E_RCOS) {
@@ -22,72 +192,28 @@ __device__ void Txx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, In
   } else {
     ip.Txx[ip.in.x][ip.in.y][ip.in.z] = 0.;
   }
-#pragma omp parallel for private(i, j, k)
-  for (k = 1; k <= Txxkmax - 1; k++) {
-    for (j = 1; j <= Txxjmax - 1; j++) {
-      for (i = 1; i <= Txximax - 1; i++) {
-        aft->sa.Txxx[i][j][k] = (2. - ma.zetadx[i][j][k] * dif.dt) / (2. + ma.zetadx[i][j][k] * dif.dt) * bef->sa.Txxx[i][j][k]
-         + 2. * (ma.c11[i][j][k] * dif.dt + ma.xi11[i][j][k]) / (2. + ma.zetadx[i][j][k] * dif.dt) * (aft->va.Vx[i][j][k] - aft->va.Vx[i - 1][j][k]) / dif.dx 
-          - 2. * ma.xi11[i][j][k] / (2. + ma.zetadx[i][j][k] * dif.dt) * (bef->va.Vx[i][j][k] - bef->va.Vx[i - 1][j][k]) / dif.dx;
-
-        aft->sa.Txxy[i][j][k] = (2. - ma.zetady[i][j][k] * dif.dt) / (2. + ma.zetady[i][j][k] * dif.dt) * bef->sa.Txxy[i][j][k]
-         + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetady[i][j][k] * dif.dt) * (aft->va.Vy[i][j][k] - aft->va.Vy[i][j - 1][k]) / dif.dy
-          - 2. * ma.khi[i][j][k] / (2. + ma.zetady[i][j][k] * dif.dt) * (bef->va.Vy[i][j][k] - bef->va.Vy[i][j - 1][k]) / dif.dy;
-
-        aft->sa.Txxz[i][j][k] = (2. - ma.zetadz[i][j][k] * dif.dt) / (2. + ma.zetadz[i][j][k] * dif.dt) * bef->sa.Txxz[i][j][k]
-         + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetadz[i][j][k] * dif.dt) * (aft->va.Vz[i][j][k] - aft->va.Vz[i][j][k - 1]) / dif.dz
-          - 2. * ma.khi[i][j][k] / (2. + ma.zetadz[i][j][k] * dif.dt) * (bef->va.Vz[i][j][k] - bef->va.Vz[i][j][k - 1]) / dif.dz;
-      }
-    }
-  }
-  // // ここから
-#pragma omp parallel for private(i, j)
-  for (j = 0; j <= Txxjmax; j++) {
-    for (i = 0; i <= Txximax; i++) {
-      aft->sa.Txxx[i][j][0] = 0.;
-      aft->sa.Txxx[i][j][Txxkmax] = 0.;
-      aft->sa.Txxy[i][j][0] = 0.;
-      aft->sa.Txxy[i][j][Txxkmax] = 0.;
-      aft->sa.Txxz[i][j][0] = 0.;
-      aft->sa.Txxz[i][j][Txxkmax] = 0.;
-    }
-  }
-#pragma omp parallel for private(j, k)
-  for (k = 1; k <= Txxkmax - 1; k++) {
-    for (j = 0; j <= Txxjmax; j++) {
-      aft->sa.Txxx[0][j][k] = 0.;
-      aft->sa.Txxx[Txximax][j][k] = 0.;
-      aft->sa.Txxy[0][j][k] = 0.;
-      aft->sa.Txxy[Txximax][j][k] = 0.;
-      aft->sa.Txxz[0][j][k] = 0.;
-      aft->sa.Txxz[Txximax][j][k] = 0.;
-    }
-  }
-#pragma omp parallel for private(i, k)
-  for (k = 1; k <= Txxkmax - 1; k++) {
-    for (i = 1; i <= Txximax - 1; i++) {
-      aft->sa.Txxx[i][0][k] = 0.;
-      aft->sa.Txxx[i][Txxjmax][k] = 0.;
-      aft->sa.Txxy[i][0][k] = 0.;
-      aft->sa.Txxy[i][Txxjmax][k] = 0.;
-      aft->sa.Txxz[i][0][k] = 0.;
-      aft->sa.Txxz[i][Txxjmax][k] = 0.;
-    }
-  }
-//全方向加算
-#pragma omp parallel for private(i, j, k)
-  for (k = 0; k <= Txxkmax; k++) {
-    for (j = 0; j <= Txxjmax; j++) {
-      for (i = 0; i <= Txximax; i++) {
-        aft->sa.Txx[i][j][k] = aft->sa.Txxx[i][j][k] + aft->sa.Txxy[i][j][k] + aft->sa.Txxz[i][j][k] + ip.Txx[i][j][k];
-      }
-    }
-  }
+  // Txx更新式
+  TxxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft, bef, ma, dif, Txximax, Txxjmax, Txxkmax);
+  // 0 padding
+  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft, Txximax, Txxjmax, Txxkmax, check);
+  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft, Txximax, Txxjmax, Txxkmax, check);
+  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft, Txximax, Txxjmax, Txxkmax, check);
+  //全方向加算
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft, ip, Txximax, Txxjmax, Txxkmax, check);
 }
 
 __device__ void Tyy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
+  char check = 'Y';
   int i, j, k;
   int Tyyimax = sr.Tyy.x, Tyyjmax = sr.Tyy.y, Tyykmax = sr.Tyy.z;
+  dim3 threadsPerBlock(16, 16, 16);  // ブロック内のスレッド数
+  dim3 UpdateBlocks((Tyyimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Tyyjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Tyykmax - 1 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroXYBlocks(    (Tyyjmax + threadsPerBlock.x - 1) / threadsPerBlock.x,     (Tyyimax + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 ZeroYZBlocks((Tyykmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,     (Tyyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 ZeroZXBlocks((Tyykmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyyimax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 DirectionalAddBlocks((Tyyimax + threadsPerBlock.x) / threadsPerBlock.x, (Tyyjmax + threadsPerBlock.y) / threadsPerBlock.y, (Tyykmax + threadsPerBlock.z) / threadsPerBlock.z);
   if (ip.mode == E_SINE) {
     ip.Tyy[ip.in.x][ip.in.y][ip.in.z] = 0;
   } else if (ip.mode == E_RCOS) {
@@ -99,71 +225,29 @@ __device__ void Tyy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, In
   } else {
     ip.Tyy[ip.in.x][ip.in.y][ip.in.z] = 0.;
   }
-#pragma omp parallel for private(i, j, k)
-  for (k = 1; k <= Tyykmax - 1; k++) {
-    for (j = 1; j <= Tyyjmax - 1; j++) {
-      for (i = 1; i <= Tyyimax - 1; i++) {
-        aft->sa.Tyyx[i][j][k] = (2. - ma.zetadx[i][j][k] * dif.dt) / (2. + ma.zetadx[i][j][k] * dif.dt) * bef->sa.Tyyx[i][j][k]
-         + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetadx[i][j][k] * dif.dt) * (aft->va.Vx[i][j][k] - aft->va.Vx[i - 1][j][k]) / dif.dx
-          - 2. * ma.khi[i][j][k] / (2. + ma.zetadx[i][j][k] * dif.dt) * (bef->va.Vx[i][j][k] - bef->va.Vx[i - 1][j][k]) / dif.dx;
 
-        aft->sa.Tyyy[i][j][k] = (2. - ma.zetady[i][j][k] * dif.dt) / (2. + ma.zetady[i][j][k] * dif.dt) * bef->sa.Tyyy[i][j][k]
-         + 2. * (ma.c11[i][j][k] * dif.dt + ma.xi11[i][j][k]) / (2. + ma.zetady[i][j][k] * dif.dt) * (aft->va.Vy[i][j][k] - aft->va.Vy[i][j - 1][k]) / dif.dy
-          - 2. * ma.xi11[i][j][k] / (2. + ma.zetady[i][j][k] * dif.dt) * (bef->va.Vy[i][j][k] - bef->va.Vy[i][j - 1][k]) / dif.dy;
-
-        aft->sa.Tyyz[i][j][k] = (2. - ma.zetadz[i][j][k] * dif.dt) / (2. + ma.zetadz[i][j][k] * dif.dt) * bef->sa.Tyyz[i][j][k]
-         + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetadz[i][j][k] * dif.dt) * (aft->va.Vz[i][j][k] - aft->va.Vz[i][j][k - 1]) / dif.dz
-          - 2. * ma.khi[i][j][k] / (2. + ma.zetadz[i][j][k] * dif.dt)  * (bef->va.Vz[i][j][k] - bef->va.Vz[i][j][k - 1]) / dif.dz;
-      }
-    }
-  }
-#pragma omp parallel for private(i, j)
-  for (j = 0; j <= Tyyjmax; j++) {
-    for (i = 0; i <= Tyyimax; i++) {
-      aft->sa.Tyyx[i][j][0] = 0.;
-      aft->sa.Tyyx[i][j][Tyykmax] = 0.;
-      aft->sa.Tyyy[i][j][0] = 0.;
-      aft->sa.Tyyy[i][j][Tyykmax] = 0.;
-      aft->sa.Tyyz[i][j][0] = 0.;
-      aft->sa.Tyyz[i][j][Tyykmax] = 0.;
-    }
-  }
-#pragma omp parallel for private(j, k)
-  for (k = 1; k <= Tyykmax - 1; k++) {
-    for (j = 0; j <= Tyyjmax; j++) {
-      aft->sa.Tyyx[0][j][k] = 0.;
-      aft->sa.Tyyx[Tyyimax][j][k] = 0.;
-      aft->sa.Tyyy[0][j][k] = 0.;
-      aft->sa.Tyyy[Tyyimax][j][k] = 0.;
-      aft->sa.Tyyz[0][j][k] = 0.;
-      aft->sa.Tyyz[Tyyimax][j][k] = 0.;
-    }
-  }
-#pragma omp parallel for private(i, k)
-  for (k = 1; k <= Tyykmax - 1; k++) {
-    for (i = 1; i <= Tyyimax - 1; i++) {
-      aft->sa.Tyyx[i][0][k] = 0.;
-      aft->sa.Tyyx[i][Tyyjmax][k] = 0.;
-      aft->sa.Tyyy[i][0][k] = 0.;
-      aft->sa.Tyyy[i][Tyyjmax][k] = 0.;
-      aft->sa.Tyyz[i][0][k] = 0.;
-      aft->sa.Tyyz[i][Tyyjmax][k] = 0.;
-    }
-  }
-//全方向加算
-#pragma omp parallel for private(i, j, k)
-  for (k = 0; k <= Tyykmax; k++) {
-    for (j = 0; j <= Tyyjmax; j++) {
-      for (i = 0; i <= Tyyimax; i++) {
-        aft->sa.Tyy[i][j][k] = aft->sa.Tyyx[i][j][k] + aft->sa.Tyyy[i][j][k] + aft->sa.Tyyz[i][j][k] + ip.Tyy[i][j][k];
-      }
-    }
-  }
+  // Tyy更新式
+  TyyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft, bef, ma, dif, Tyyimax, Tyyjmax, Tyykmax);
+  // 0 padding
+  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft, Tyyimax, Tyyjmax, Tyykmax, check);
+  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft, Tyyimax, Tyyjmax, Tyykmax, check);
+  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft, Tyyimax, Tyyjmax, Tyykmax, check);
+  // 全方向加算
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft, ip, Tyyimax, Tyyjmax, Tyykmax, check);
 }
 
 __device__ void Tzz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
+  char check = 'Z';
   int i, j, k;
   int Tzzimax = sr.Tzz.x, Tzzjmax = sr.Tzz.y, Tzzkmax = sr.Tzz.z;
+  dim3 threadsPerBlock(16, 16, 16);  // ブロック内のスレッド数
+  dim3 UpdateBlocks((Tzzimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Tzzjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Tzzkmax - 1 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroXYBlocks(    (Tzzjmax + threadsPerBlock.x - 1) / threadsPerBlock.x,     (Tzzimax + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 ZeroYZBlocks((Tzzkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,     (Tzzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 ZeroZXBlocks((Tzzkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzzimax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
+  dim3 DirectionalAddBlocks((Tzzimax + threadsPerBlock.x) / threadsPerBlock.x, (Tzzjmax + threadsPerBlock.y) / threadsPerBlock.y, (Tzzkmax + threadsPerBlock.z) / threadsPerBlock.z);
   if (ip.mode == E_SINE) {
     ip.Tzz[ip.in.x][ip.in.y][ip.in.z] = (-1) * sin(2. * M_PI * ip.freq * (double)t * dif.dt) / 2.;
   } else if (ip.mode == E_RCOS) {
@@ -177,66 +261,13 @@ __device__ void Tzz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, In
   }
 
   // Tzzの更新式
-#pragma omp parallel for private(i, j, k)
-  for (k = 1; k <= Tzzkmax - 1; k++) {
-    for (j = 1; j <= Tzzjmax - 1; j++) {
-      for (i = 1; i <= Tzzimax - 1; i++) {
-        aft->sa.Tzzx[i][j][k] = (2. - ma.zetadx[i][j][k] * dif.dt) / (2. + ma.zetadx[i][j][k] * dif.dt) * bef->sa.Tzzx[i][j][k]
-         + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetadx[i][j][k] * dif.dt) * (aft->va.Vx[i][j][k] - aft->va.Vx[i - 1][j][k]) / dif.dx
-          - 2. * ma.khi[i][j][k] / (2. + ma.zetadx[i][j][k] * dif.dt) * (bef->va.Vx[i][j][k] - bef->va.Vx[i - 1][j][k]) / dif.dx;
-
-        aft->sa.Tzzy[i][j][k] = (2. - ma.zetady[i][j][k] * dif.dt) / (2. + ma.zetady[i][j][k] * dif.dt) * bef->sa.Tzzy[i][j][k]
-         + 2. * (ma.ramda[i][j][k] * dif.dt + ma.khi[i][j][k]) / (2. + ma.zetady[i][j][k] * dif.dt) * (aft->va.Vy[i][j][k] - aft->va.Vy[i][j - 1][k]) / dif.dy
-          - 2. * ma.khi[i][j][k] / (2. + ma.zetady[i][j][k] * dif.dt)  * (bef->va.Vy[i][j][k] - bef->va.Vy[i][j - 1][k]) / dif.dy;
-
-        aft->sa.Tzzz[i][j][k] = (2. - ma.zetadz[i][j][k] * dif.dt) / (2. + ma.zetadz[i][j][k] * dif.dt) * bef->sa.Tzzz[i][j][k]
-         + 2. * (ma.c11[i][j][k] * dif.dt + ma.xi11[i][j][k]) / (2. + ma.zetadz[i][j][k] * dif.dt) * (aft->va.Vz[i][j][k] - aft->va.Vz[i][j][k - 1]) / dif.dz
-          - 2. * ma.xi11[i][j][k] / (2. + ma.zetadz[i][j][k] * dif.dt) * (bef->va.Vz[i][j][k] - bef->va.Vz[i][j][k - 1]) / dif.dz;
-      }
-    }
-  }
-#pragma omp parallel for private(i, j)
-  for (j = 0; j <= Tzzjmax; j++) {
-    for (i = 0; i <= Tzzimax; i++) {
-      aft->sa.Tzzx[i][j][0] = 0.;
-      aft->sa.Tzzx[i][j][Tzzkmax] = 0.;
-      aft->sa.Tzzy[i][j][0] = 0.;
-      aft->sa.Tzzy[i][j][Tzzkmax] = 0.;
-      aft->sa.Tzzz[i][j][0] = 0.;
-      aft->sa.Tzzz[i][j][Tzzkmax] = 0.;
-    }
-  }
-#pragma omp parallel for private(j, k)
-  for (k = 1; k <= Tzzkmax - 1; k++) {
-    for (j = 0; j <= Tzzjmax; j++) {
-      aft->sa.Tzzx[0][j][k] = 0.;
-      aft->sa.Tzzx[Tzzimax][j][k] = 0.;
-      aft->sa.Tzzy[0][j][k] = 0.;
-      aft->sa.Tzzy[Tzzimax][j][k] = 0.;
-      aft->sa.Tzzz[0][j][k] = 0.;
-      aft->sa.Tzzz[Tzzimax][j][k] = 0.;
-    }
-  }
-#pragma omp parallel for private(i, k)
-  for (k = 1; k <= Tzzkmax - 1; k++) {
-    for (i = 1; i <= Tzzimax - 1; i++) {
-      aft->sa.Tzzx[i][0][k] = 0.;
-      aft->sa.Tzzx[i][Tzzjmax][k] = 0.;
-      aft->sa.Tzzy[i][0][k] = 0.;
-      aft->sa.Tzzy[i][Tzzjmax][k] = 0.;
-      aft->sa.Tzzz[i][0][k] = 0.;
-      aft->sa.Tzzz[i][Tzzjmax][k] = 0.;
-    }
-  }
-//全方向加算
-#pragma omp parallel for private(i, j, k)
-  for (k = 0; k <= Tzzkmax; k++) {
-    for (j = 0; j <= Tzzjmax; j++) {
-      for (i = 0; i <= Tzzimax; i++) {
-        aft->sa.Tzz[i][j][k] = aft->sa.Tzzx[i][j][k] + aft->sa.Tzzy[i][j][k] + aft->sa.Tzzz[i][j][k] + ip.Tzz[i][j][k];
-      }
-    }
-  }
+  TyyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft, bef, ma, dif, Tzzimax, Tzzjmax, Tzzkmax);
+  // 0 padding
+  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft, Tzzimax, Tzzjmax, Tzzkmax, check);
+  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft, Tzzimax, Tzzjmax, Tzzkmax, check);
+  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft, Tzzimax, Tzzjmax, Tzzkmax, check);
+  // 全方向加算
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft, ip, Tzzimax, Tzzjmax, Tzzkmax, check);
 }
 //垂直応力計算
 __global__ void Sig(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
