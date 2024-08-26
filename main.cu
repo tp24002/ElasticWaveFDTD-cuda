@@ -76,10 +76,6 @@ int main(void) {
 
   insertAir(&ma, ran.sr, med[E_AIR]);
   insertConcrete(&ma, con);//maに格納
-  
-
-
- 0
  
   int clackNum = 0;
   if(clackNum != 0){

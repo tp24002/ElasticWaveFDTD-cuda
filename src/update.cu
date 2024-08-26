@@ -12,6 +12,7 @@
 
 // 引数に(int imax, int jmax, int kmax)を用いている理由はない
 // (SigRan sr)でも良い，ただ最初に書いたコードがこれだっただけ
+// max:構造体にまとめていいかも
 // 垂直応力更新並列関数
 __device__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
@@ -679,14 +680,14 @@ __global__ void Vel(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   Vz(aft, bef, ma, dif, vr);
 }
 
-__global__ void Acc(Coord_acc *A,BefAft *aft, BefAft *bef, Diff dif, Coord out){
+void Acc(Coord_acc *A,BefAft *aft, BefAft *bef, Diff dif, Coord out){
   A->x = ((aft->va.Vx[out.x - 1][out.y][out.z] - bef->va.Vx[out.x - 1][out.y][out.z]) / dif.dt  + (aft->va.Vx[out.x][out.y][out.z] - bef->va.Vx[out.x][out.y][out.z]) / dif.dt) / 2;
   A->y = ((aft->va.Vy[out.x][out.y - 1][out.z] - bef->va.Vy[out.x][out.y - 1][out.z]) / dif.dt  + (aft->va.Vy[out.x][out.y][out.z] - bef->va.Vy[out.x][out.y][out.z]) / dif.dt) / 2;
   A->z = ((aft->va.Vz[out.x][out.y][out.z - 1] - bef->va.Vz[out.x][out.y][out.z - 1]) / dif.dt  + (aft->va.Vz[out.x][out.y][out.z] - bef->va.Vz[out.x][out.y][out.z]) / dif.dt) / 2;
 
 }
 //更新
-__global__ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
+void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
   int i, j, k;
   int Txximax = ran.sr.Txx.x, Txxjmax = ran.sr.Txx.y, Txxkmax = ran.sr.Txx.z;
   int Tyyimax = ran.sr.Tyy.x, Tyyjmax = ran.sr.Tyy.y, Tyykmax = ran.sr.Tyy.z;
