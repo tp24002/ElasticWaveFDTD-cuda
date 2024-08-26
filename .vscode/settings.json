@@ -2,6 +2,7 @@
     "files.associations": {
         "cstdlib": "cpp",
         "init.h": "c",
-        "struct.h": "c"
+        "struct.h": "c",
+        "cmath": "cpp"
     }
 }

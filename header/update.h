@@ -17,5 +17,5 @@ void Txy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr);
 void Tyz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr);
 void Tzx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr);
 void Tau(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr);
-void Acc(Coord_acc *A,BefAft *aft, BefAft *bef, Diff dif, Coord out, Coord center);
+void Acc(Coord_acc *A,BefAft *aft, BefAft *bef, Diff dif, Coord out);
 void swapBefAft(BefAft *aft, BefAft *bef, Range ran);
