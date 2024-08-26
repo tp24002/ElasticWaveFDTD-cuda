@@ -111,7 +111,7 @@ int main(void) {
     Tau(&aft_host, &bef_host, ma, dif, ran.tr);
     // 加速度算出＆書き込み
     for(int i = 0; i < outNum; i++){
-      Acc(&A[i],&aft_host, &bef_host, dif, out[i], center);
+      Acc(&A[i],&aft_host, &bef_host, dif, out[i]);
       fprintf(fp1, "%le,%le,%le," , A[i].x,A[i].y,A[i].z);
     }
     fprintf(fp1,"\n");
