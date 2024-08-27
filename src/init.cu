@@ -459,6 +459,51 @@ void initMedArr(MedArr *ma, SigRan sr) {
   }
 }
 
+void initrandom(Coord con_size, Coord *clack, int ratio){
+  if(con_size.x < 3 || con_size.y < 3 || con_size.z < 3) {
+    printf("Cannot place defects.\n");
+    return;
+  }
+  int count = 0;
+  // コンクリートセル数
+  int max_Patern = con_size.x * con_size.y * con_size.z;
+  // 内部欠陥パターン数
+  int max_ClackPatern = (con_size.x - 2) * (con_size.y - 2) * (con_size.z - 2);
+  // 割合による欠陥数
+  int clack_count = max_Patern * ratio / 100;
+  if(clack_count > max_ClackPatern){
+    printf("The number of internal defects is insufficient.\n");
+    return;
+  }
+  
+  // 乱数の種を初期化
+  srand(time(NULL));
+
+  while (count < clack_count) {
+    // 新しい乱数の組み合わせを生成
+    int rand1 = rand() % (con_size.x - 2) + 1;
+    int rand2 = rand() % (con_size.y - 2) + 1;
+    int rand3 = rand() % (con_size.z - 2) + 1;
+
+    // 重複がないかチェック
+    int is_unique = 1;
+    for (int i = 0; i < count; i++) {
+      if (clack[i].x == rand1 && clack[i].y == rand2 && clack[i].z == rand3) {
+        is_unique = 0;
+        break;
+      }
+    }
+
+    // 重複がなければ保存
+    if (is_unique) {
+      clack[count].x = rand1;
+      clack[count].y = rand2;
+      clack[count].z = rand3;
+      count++;
+    }
+  }
+}
+
 void initClack(Object *clack, Medium med, Pml *pml, int spx, int spy, int spz, int ranx, int rany, int ranz) {
   clack->med = med;
   spx = spx + pml->pl1.x - 1, spy = spy + pml->pl1.y - 1, spz = spz + pml->pl1.z - 1;//ok
