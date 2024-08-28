@@ -14,7 +14,7 @@
 // (SigRan sr)でも良い，ただ最初に書いたコードがこれだっただけ
 // max:構造体にまとめていいかも
 // 垂直応力更新並列関数
-__device__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax) {
+__global__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
@@ -34,7 +34,7 @@ __device__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int ima
   }
 }
 // 垂直応力更新並列関数
-__device__ void TyyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax) {
+__global__ void TyyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
@@ -54,7 +54,7 @@ __device__ void TyyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int ima
   }
 }
 // 垂直応力更新並列関数
-__device__ void TzzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax){
+__global__ void TzzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int imax, int jmax, int kmax){
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
@@ -74,7 +74,7 @@ __device__ void TzzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, int ima
   }
 }
 // T 0 padding
-__device__ void ZeroT_XY(BefAft *aft, int imax, int jmax, int kmax, char check) {
+__global__ void ZeroT_XY(BefAft *aft, int imax, int jmax, int kmax, char check) {
   int j = blockIdx.x * blockDim.x + threadIdx.x;
   int i = blockIdx.y * blockDim.y + threadIdx.y;
   if(j > jmax || i > imax) {
@@ -107,7 +107,7 @@ __device__ void ZeroT_XY(BefAft *aft, int imax, int jmax, int kmax, char check) 
   }
 }
 // T 0 padding
-__device__ void ZeroT_YZ(BefAft *aft, int imax, int jmax, int kmax, char check) {
+__global__ void ZeroT_YZ(BefAft *aft, int imax, int jmax, int kmax, char check) {
   int k = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   if(k > kmax - 1 || j > jmax) {
@@ -140,7 +140,7 @@ __device__ void ZeroT_YZ(BefAft *aft, int imax, int jmax, int kmax, char check) 
   }
 }
 // T 0 padding
-__device__ void ZeroT_ZX(BefAft *aft, int imax, int jmax, int kmax, char check) {
+__global__ void ZeroT_ZX(BefAft *aft, int imax, int jmax, int kmax, char check) {
   int k = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int i = blockIdx.y * blockDim.y + threadIdx.y + 1;
   if(k > kmax - 1 || i > imax - 1) {
@@ -173,7 +173,7 @@ __device__ void ZeroT_ZX(BefAft *aft, int imax, int jmax, int kmax, char check) 
   }
 }
 // 全方向加算
-__device__ void DirectionalAdd(BefAft *aft, Inpaluse ip, int imax, int jmax, int kmax, char check) {
+__global__ void DirectionalAdd(BefAft *aft, Inpaluse ip, int imax, int jmax, int kmax, char check) {
   // スレッドインデックスの計算
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -193,9 +193,8 @@ __device__ void DirectionalAdd(BefAft *aft, Inpaluse ip, int imax, int jmax, int
   }
 }
 // Txxクラス的な(Blocks大丈夫かな？)
-__device__ void Txx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
+void Txx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
   char check = 'X';
-  int i, j, k;
   int Txximax = sr.Txx.x, Txxjmax = sr.Txx.y, Txxkmax = sr.Txx.z;
   dim3 threadsPerBlock(16, 16, 16);  // ブロック内のスレッド数
   dim3 UpdateBlocks((Txximax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -228,9 +227,8 @@ __device__ void Txx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, In
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft, ip, Txximax, Txxjmax, Txxkmax, check);
 }
 // Tyyクラス的な(Blocks大丈夫かな？)
-__device__ void Tyy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
+void Tyy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
   char check = 'Y';
-  int i, j, k;
   int Tyyimax = sr.Tyy.x, Tyyjmax = sr.Tyy.y, Tyykmax = sr.Tyy.z;
   dim3 threadsPerBlock(16, 16, 16);  // ブロック内のスレッド数
   dim3 UpdateBlocks((Tyyimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -264,9 +262,8 @@ __device__ void Tyy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, In
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft, ip, Tyyimax, Tyyjmax, Tyykmax, check);
 }
 // Tzzクラス的な(Blocks大丈夫かな？)
-__device__ void Tzz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
+void Tzz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
   char check = 'Z';
-  int i, j, k;
   int Tzzimax = sr.Tzz.x, Tzzjmax = sr.Tzz.y, Tzzkmax = sr.Tzz.z;
   dim3 threadsPerBlock(16, 16, 16);  // ブロック内のスレッド数
   dim3 UpdateBlocks((Tzzimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -300,7 +297,7 @@ __device__ void Tzz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, In
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft, ip, Tzzimax, Tzzjmax, Tzzkmax, check);
 }
 // 垂直応力計算(main呼び出し関数)
-__global__ void Sig(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
+void Sig(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, Inpaluse ip, int t) {
   Txx(aft, bef, ma, dif, sr, ip, t);
   Tyy(aft, bef, ma, dif, sr, ip, t);
   Tzz(aft, bef, ma, dif, sr, ip, t);
@@ -309,13 +306,13 @@ __global__ void Sig(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, SigRan sr, In
 // せん断応力
 
 // せん断応力更新関数
-__device__ void TxyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
+__global__ void TxyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1; // 始点を+1
 
   int imax = tr.Txy.x, jmax = tr.Txy.y, kmax = tr.Txy.z;
-  double Hzetadx, Hzetady, Hzetadz, Hmu, Hgamma;
+  double Hzetadx, Hzetady, Hmu, Hgamma;
 
   if(i <= imax && j <= jmax && k <= kmax - 1) {
     //PML:減衰係数,計算領域:摩擦定数
@@ -336,13 +333,13 @@ __device__ void TxyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan 
   }
 }
 // せん断応力更新関数
-__device__ void TyzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
+__global__ void TyzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
   
   int imax = tr.Tyz.x, jmax = tr.Tyz.y, kmax = tr.Tyz.z;
-  double Hzetadx, Hzetady, Hzetadz, Hmu, Hgamma;
+  double Hzetady, Hzetadz, Hmu, Hgamma;
 
   if(i <= imax - 1 && j <= jmax && k <= kmax) {
     Hzetady = 4. * pow((1. / ma.zetady[i][j + 1][k + 1]) + (1. / ma.zetady[i][j + 1][k]) + (1. / ma.zetady[i][j][k + 1]) + (1. / ma.zetady[i][j][k]), -1.);
@@ -359,13 +356,13 @@ __device__ void TyzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan 
   }
 }
 // せん断応力更新関数
-__device__ void TzxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
+__global__ void TzxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
   
   int imax = tr.Tzx.x, jmax = tr.Tzx.y, kmax = tr.Tzx.z;
-  double Hzetadx, Hzetady, Hzetadz, Hmu, Hgamma;
+  double Hzetadx, Hzetadz, Hmu, Hgamma;
 
   if(i <= imax && j <= jmax - 1 && k <= kmax) {
     Hzetadx = 4. * pow((1. / ma.zetadx[i + 1][j][k + 1]) + (1. / ma.zetadx[i + 1][j][k]) + (1. / ma.zetadx[i][j][k + 1]) + (1. / ma.zetadx[i][j][k]), -1.);
@@ -382,10 +379,9 @@ __device__ void TzxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan 
   }
 }
 // Txyクラス的な
-__device__ void Txy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
+void Txy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   int i, j, k;
   int Txyimax = tr.Txy.x, Txyjmax = tr.Txy.y, Txykmax = tr.Txy.z;
-  double Hzetadx, Hzetady, Hzetadz, Hmu, Hgamma;
 
   dim3 threadsPerBlock(16, 16, 16); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Txyimax + threadsPerBlock.x - 1)     / threadsPerBlock.x,
@@ -411,10 +407,9 @@ __device__ void Txy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   }
 }
 // Tyzクラス的な
-__device__ void Tyz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
+void Tyz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   int i, j, k;
   int Tyzimax = tr.Tyz.x, Tyzjmax = tr.Tyz.y, Tyzkmax = tr.Tyz.z;
-  double Hzetadx, Hzetady, Hzetadz, Hmu, Hgamma;
 
   dim3 threadsPerBlock(16, 16, 16); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Tyzimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -442,10 +437,9 @@ __device__ void Tyz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   }
 }
 // Tzxクラス的な
-__device__ void Tzx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
+void Tzx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   int i, j, k;
   int Tzximax = tr.Tzx.x, Tzxjmax = tr.Tzx.y, Tzxkmax = tr.Tzx.z;
-  double Hzetadx, Hzetady, Hzetadz, Hmu, Hgamma;
 
   dim3 threadsPerBlock(16, 16, 16); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Tzximax + threadsPerBlock.x - 1)     / threadsPerBlock.x,
@@ -472,7 +466,7 @@ __device__ void Tzx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   }
 }
 // せん断応力計算(main呼び出し関数)
-__global__ void Tau(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
+void Tau(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
   Txy(aft, bef, ma, dif, tr);
   Tyz(aft, bef, ma, dif, tr);
   Tzx(aft, bef, ma, dif, tr);
@@ -481,7 +475,7 @@ __global__ void Tau(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, TauRan tr) {
 // 粒子速度
 
 // 粒子速度更新関数
-__device__ void VxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
+__global__ void VxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
@@ -505,7 +499,7 @@ __device__ void VxUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan v
   }
 }
 // 粒子速度更新関数
-__device__ void VyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
+__global__ void VyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
@@ -527,7 +521,7 @@ __device__ void VyUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan v
   }
 }
 // 粒子速度更新関数
-__device__ void VzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
+__global__ void VzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
@@ -549,7 +543,7 @@ __device__ void VzUpdate(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan v
   }
 }
 // Vxクラス的な
-__device__ void Vx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
+void Vx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   int i, j, k;
   int Vximax = vr.Vx.x, Vxjmax = vr.Vx.y, Vxkmax = vr.Vx.z;
 
@@ -558,9 +552,9 @@ __device__ void Vx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
                     (Vxjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Vxkmax - 1 + threadsPerBlock.z - 1) / threadsPerBlock.z);
   VxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft, bef, ma, dif, vr);
-
   for (k = 0; k <= Vxkmax; k++) {
     for (i = 0; i <= Vximax; i++) {
+      ///////////////////////////////////////////////kaizen
       aft->va.Vxx[i][0][k] = 0.;
       aft->va.Vxx[i][Vxjmax][k] = 0.;
       aft->va.Vxy[i][0][k] = 0.;
@@ -590,7 +584,7 @@ __device__ void Vx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   }
 }
 // Vyクラス的な
-__device__ void Vy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
+void Vy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   int i, j, k;
   int Vyimax = vr.Vy.x, Vyjmax = vr.Vy.y, Vykmax = vr.Vy.z;
 
@@ -632,7 +626,7 @@ __device__ void Vy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   }
 }
 // Vzクラス的な
-__device__ void Vz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
+void Vz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   int i, j, k;
   int Vzimax = vr.Vz.x, Vzjmax = vr.Vz.y, Vzkmax = vr.Vz.z;
 
@@ -674,7 +668,7 @@ __device__ void Vz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   }
 }
 //粒子速度計算
-__global__ void Vel(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
+void Vel(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, VelRan vr) {
   Vx(aft, bef, ma, dif, vr);
   Vy(aft, bef, ma, dif, vr);
   Vz(aft, bef, ma, dif, vr);
