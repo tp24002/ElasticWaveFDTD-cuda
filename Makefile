@@ -1,11 +1,11 @@
-sample.out:	main.o init.o insert.o update.o para_in.o 
-		nvcc -o sample.out ./object/main.o ./object/init.o ./object/insert.o ./object/update.o  ./object/para_in.o -Xcompiler -fopenmp -O3
+sample.out:	main.o init.o insert.o update.o para_in.o extradition.o
+		nvcc -o sample.out ./object/main.o ./object/init.o ./object/insert.o ./object/update.o ./object/extradition.o ./object/para_in.o -Xcompiler -fopenmp -O3
 # sample.out:	main2.o init.o insert.o update.o print.o
 # 			gcc -o sample.out ./object/main2.o ./object/init.o ./object/insert.o ./object/update.o ./object/print.o -lm -fopenmp -O3
 main.o:	./main.cu
 		nvcc -o ./object/main.o -c ./main.cu
-# main.o:	./main2.c
-# 		gcc -o ./object/main.o -c ./main2.c
+extradition.o:	./src/extradition.cu
+		nvcc -o ./object/extradition.o -c ./src/extradition.cu
 # main.o: ./main3.c
 # 		gcc -o ./object/main.o -c ./main3.c
 init.o: ./src/init.cu

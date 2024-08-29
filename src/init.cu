@@ -62,7 +62,7 @@ void initDiff(Diff *dif, Medium *med) {
     tmp = MAX(sqrt((med[i].K + 4. / 3. * med[i].G) / med[i].rho),tmp);
   }
   printf("v = %lf\n", tmp);
-  dif->dt = dif->dx / tmp / 10000.;
+  dif->dt = dif->dx / tmp / 100.;
 }
 
 void initPml(Pml *pml, Medium *med, Diff dif) {

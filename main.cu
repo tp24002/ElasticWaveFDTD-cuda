@@ -9,6 +9,7 @@
 #include "./header/struct.h"
 #include "./header/update.h"
 #include "./header/para_in.h"
+#include "./header/extradition.h"
 
 void progressBar(int now, int max);
 
@@ -53,7 +54,8 @@ int main(void) {
   int max_Patern; // コンクリートのセル数
   // int max_ClackPatern; // 欠陥を配置できる最大のパターン数
   int clack_count; // 割合による欠陥数
-
+  Coord threads;
+  initCoord(&threads, 128, 128, 128);
   para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip_host,&outNum,&tmax);
   //入力地点出力
   printf("in:%d,%d,%d\n", ip_host.in.x, ip_host.in.y, ip_host.in.z);
@@ -83,7 +85,6 @@ int main(void) {
   initDeviceMedArr(&ma_device, ran_host.sr);
 
   initHostInpalse(&ip_host, ran_host.sr, pml, ip_host.mode, ip_host.in.x, ip_host.in.y, ip_host.in.z, ip_host.freq);//
-  printf("ok\n");
   initDeviceInpalse(&ip_device, ran_device.sr, pml, ip_device.mode, ip_device.in.x, ip_device.in.y, ip_device.in.z, ip_device.freq);//
   printf("in:%d,%d,%d\n", ip_host.in.x, ip_host.in.y, ip_host.in.z);
   for(int outnum = 0; outnum < outNum; outnum++){
@@ -123,7 +124,7 @@ int main(void) {
   } else {
     sprintf(fn1, "./%d_%d_%d_cos/first_con.csv",tmax, region.x, con_size.x);
   }
-  fclose(fp1);
+  // fclose(fp1);
 
 
   //ファイル名出力
@@ -135,20 +136,18 @@ int main(void) {
   
 
   // 変数引き渡しcpu->gpu
-  cudaMemcpy(&aft_host, &aft_device, sizeof(BefAft), cudaMemcpyDeviceToHost);
-
-  cudaMemcpy(&bef_host, &bef_device, sizeof(BefAft), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&ma_host, &ma_device, sizeof(MedArr), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&dif_host, &dif_device, sizeof(Diff), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&ran_host, &ran_device, sizeof(Range), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&ip_host, &ip_device, sizeof(Inpaluse), cudaMemcpyDeviceToHost);
+  // cudaMemcpy(&ma_host, &ma_device, sizeof(MedArr), cudaMemcpyHostToDevice);
+  // cudaMemcpy(&dif_host, &dif_device, sizeof(Diff), cudaMemcpyHostToDevice);
+  // cudaMemcpy(&ran_host, &ran_device, sizeof(Range), cudaMemcpyHostToDevice);
+  onceHtoD(&ma_host, &ma_device, &dif_host, &dif_device, &ran_host, &ran_device);
   for (int t = 0; t < tmax; t++) {
-    Vel(&aft_device, &bef_device, ma_device, dif_device, ran_device.vr);
-    printf("ok\n");
-    Sig(&aft_device, &bef_device, ma_device, dif_device, ran_device.sr, ip_device, t);
-    printf("ok\n");
-    Tau(&aft_device, &bef_device, ma_device, dif_device, ran_device.tr);
-    printf("ok\n");
+    insertInpulse(&ip_host, dif_host, t);
+    loopHtoD(&ip_host, &ip_device, &aft_host, &aft_device, &bef_host, &bef_device, ran_host);
+    Vel(&aft_device, &bef_device, ma_device, dif_device, ran_device.vr, threads);
+    Sig(&aft_device, &bef_device, ma_device, dif_device, ran_device.sr, ip_device, t, threads);
+    Tau(&aft_device, &bef_device, ma_device, dif_device, ran_device.tr, threads);
+    loopDtoH(&aft_host, &aft_device, &bef_host, &bef_device, ran_host);
+
     // 加速度算出＆書き込み
     for(int i = 0; i < outNum; i++){
       Acc(&A[i],&aft_host, &bef_host, dif_host, out[i]);
@@ -159,7 +158,7 @@ int main(void) {
     swapBefAft(&aft_host, &bef_host, ran_host);
     progressBar(t, tmax);
   }
-  // fclose(fp1);
+  fclose(fp1);
   printf("loop end.\n");
   return 0;
 }

@@ -138,7 +138,7 @@ typedef struct {
   SigArr sa;
   TauArr ta;
   VelArr va;
-  SigArr noin;
+  // SigArr noin;???????
 } BefAft;
 
 typedef struct {

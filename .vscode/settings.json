@@ -3,6 +3,25 @@
         "cstdlib": "cpp",
         "init.h": "c",
         "struct.h": "c",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "algorithm": "cpp",
+        "xiosbase": "cpp",
+        "xutility": "cpp",
+        "ios": "cpp",
+        "array": "cpp",
+        "bitset": "cpp",
+        "format": "cpp",
+        "initializer_list": "cpp",
+        "list": "cpp",
+        "utility": "cpp",
+        "vector": "cpp",
+        "xhash": "cpp",
+        "xstring": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "unordered_map": "cpp",
+        "ratio": "cpp"
     }
 }

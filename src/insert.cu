@@ -1,8 +1,10 @@
+#define _USE_MATH_DEFINES
 #include "../header/insert.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <omp.h>
 
 #include "../header/struct.h"
 
@@ -42,33 +44,6 @@ void insertConcrete(MedArr *ma, Object con) {
   for (k = con.sp.z; k < con.sp.z + con.range.z; k++) {
     for (j = con.sp.y; j < con.sp.y + con.range.y; j++) {
       for (i = con.sp.x; i < con.sp.x + con.range.x; i++) {
-        ma->ramda[i][j][k] = objmed.ramda;
-        ma->mu[i][j][k] = objmed.G;
-        ma->c11[i][j][k] = objmed.ramda + 2. * objmed.G;
-        ma->rho[i][j][k] = objmed.rho;
-        ma->zetaxx[i][j][k] = objmed.zeta;
-        ma->zetaxy[i][j][k] = objmed.zeta;
-        ma->zetaxz[i][j][k] = objmed.zeta;
-        ma->zetayx[i][j][k] = objmed.zeta;
-        ma->zetayy[i][j][k] = objmed.zeta;
-        ma->zetayz[i][j][k] = objmed.zeta;
-        ma->zetazx[i][j][k] = objmed.zeta;
-        ma->zetazy[i][j][k] = objmed.zeta;
-        ma->zetazz[i][j][k] = objmed.zeta;
-        ma->gamma[i][j][k] = objmed.gamma;
-        ma->khi[i][j][k] = objmed.khi;
-        ma->xi11[i][j][k] = objmed.khi + 2. * objmed.gamma;
-      }
-    }
-  }
-}
-////////steeeeeeeel
-void insertSteel(MedArr *ma, Object steel) {
-  int i, j, k;
-  Medium objmed = steel.med;
-  for (k = steel.sp.z; k < steel.sp.z + steel.range.z; k++) {
-    for (j = steel.sp.y; j < steel.sp.y + steel.range.y; j++) {
-      for (i = steel.sp.x; i < steel.sp.x + steel.range.x; i++) {
         ma->ramda[i][j][k] = objmed.ramda;
         ma->mu[i][j][k] = objmed.G;
         ma->c11[i][j][k] = objmed.ramda + 2. * objmed.G;
@@ -190,6 +165,28 @@ void insertPml(MedArr *ma, SigRan sr, Pml pml) {
         ma->zetadz[i][j][k] = ma->zetaxz[i][j][k] / ma->rho[i][j][k];
       }
     }
+  }
+}
+
+void insertInpulse(Inpaluse *ip, Diff dif, int t) {
+  if (ip->mode == E_SINE) {
+    ip->Txx[ip->in.x][ip->in.y][ip->in.z] = 0;
+    ip->Tyy[ip->in.x][ip->in.y][ip->in.z] = 0;
+    ip->Tzz[ip->in.x][ip->in.y][ip->in.z] = 0;
+  } else if (ip->mode == E_RCOS) {
+    if (t < 1. / ip->freq / dif.dt) {
+      ip->Txx[ip->in.x][ip->in.y][ip->in.z] = 0;///* 8.e3 * 0.5 * */(1. - cos(2. * M_PI * ip.freq * (double)t * dif.dt)) / 2.;
+      ip->Tyy[ip->in.x][ip->in.y][ip->in.z] = 0;///* 8.e3 * 0.5 * */(1. - cos(2. * M_PI * ip.freq * (double)t * dif.dt)) / 2.;
+      ip->Tzz[ip->in.x][ip->in.y][ip->in.z] = 8.e3 * 0.5 * (1. - cos(2. * M_PI * ip->freq * (double)t * dif.dt)) / 2.;
+    } else {
+      ip->Txx[ip->in.x][ip->in.y][ip->in.z] = 0.;
+      ip->Tyy[ip->in.x][ip->in.y][ip->in.z] = 0.;
+      ip->Tzz[ip->in.x][ip->in.y][ip->in.z] = 0.;
+    }
+  } else {
+    ip->Txx[ip->in.x][ip->in.y][ip->in.z] = 0.;
+    ip->Tyy[ip->in.x][ip->in.y][ip->in.z] = 0.;
+    ip->Tzz[ip->in.x][ip->in.y][ip->in.z] = 0.;
   }
 }
 
