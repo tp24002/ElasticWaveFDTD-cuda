@@ -22,6 +22,8 @@
         "string": "cpp",
         "string_view": "cpp",
         "unordered_map": "cpp",
-        "ratio": "cpp"
+        "ratio": "cpp",
+        "xlocale": "cpp",
+        "__locale": "cpp"
     }
 }

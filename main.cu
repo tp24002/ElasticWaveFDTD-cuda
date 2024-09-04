@@ -18,21 +18,14 @@ int main(void) {
   Medium med[E_M_END];
   Object con;
   Object *clack;
-  Range ran_host;
-  Range ran_device;
+  Range ran;
   Pml pml;
-  Diff dif_host;
-  Diff dif_device;
-  MedArr ma_host;
-  MedArr ma_device;
-  //hosu data(cpu)
-  BefAft bef_host;
-  BefAft aft_host;
-  //device data(gpu)
-  BefAft bef_device;
-  BefAft aft_device;
-  Inpaluse ip_host;
-  Inpaluse ip_device;
+  Diff dif;
+  MedArr ma;
+  //host data(cpu)
+  BefAft bef;
+  BefAft aft;
+  Inpaluse ip;
   // Coord out1,out2,out3,out4;
   FILE *fp1;
   // FILE *fp1,*fp2,*fp3,*fp4;
@@ -55,64 +48,76 @@ int main(void) {
   // int max_ClackPatern; // 欠陥を配置できる最大のパターン数
   int clack_count; // 割合による欠陥数
   Coord threads;
+
+  // スレッド数
   initCoord(&threads, 128, 128, 128);
-  para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip_host,&outNum,&tmax);
-  //入力地点出力
-  printf("in:%d,%d,%d\n", ip_host.in.x, ip_host.in.y, ip_host.in.z);
-  printf("center:%d,%d,%d\n",center.x,center.y,center.z);
+  // 外部入力
+  para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip,&outNum,&tmax);
+  printf("region:(%d,%d,%d)\n", region.x, region.y, region.z);
+  // 媒質パターン設定
   initMedium(med);
   printf("med[E_CON].gamma = %le\n", med[E_CON].gamma);
   printf("med[E_CON].khi = %le\n", med[E_CON].khi);
-  initDiff(&dif_host, med);
-  printf("dif_host.dt = %le\n", dif_host.dt);
-  initPml(&pml, med, dif_host);//pml 32*2
+  // 差分間隔設定(initで直入力しているためinsertなし)
+  initDiff(&dif, med);
+  printf("dif.dt = %le\n", dif.dt);
+  // pml層設定
+  initPml(&pml, med, dif);
   printf("pml.fm = %le\n", pml.fm);
+  // コンクリート配置
   initConcrete(&con, med[E_CON], pml, con_st.x, con_st.y, con_st.z, con_size.x, con_size.y, con_size.z);//x:+5,-5 y:+3,-3 z:+2,-0
-  //コンクリ部分出力
+  // コンクリ部分出力
   printf("start:%d,%d,%d\n",con.sp.x,con.sp.y,con.sp.z);
   printf("size:%d,%d,%d\n",con.range.x,con.range.y,con.range.z);
-  initRange(&ran_host, region.x, region.y, region.z, pml);//PMLOK
-  initRange(&ran_device, region.x, region.y, region.z, pml);//PMLOK
+  // 計算領域設定
+  initRange(&ran, region.x, region.y, region.z, pml);
+  initRange(&ran, region.x, region.y, region.z, pml);
   // hostメモリ確保
-  initHostBefAft(&bef_host, ran_host);
-  initHostBefAft(&aft_host, ran_host);
+  // bef = (BefAft *)malloc(sizeof(BefAft));
+  initHostBefAft(&bef, ran);
+  initHostBefAft(&aft, ran);
+  printf("%lu\n",sizeof(bef));
 
-  // deviceメモリ確保
-  initDeviceBefAft(&bef_device, ran_device);
-  initDeviceBefAft(&aft_device, ran_device);
-
-  initHostMedArr(&ma_host, ran_host.sr);
-  initDeviceMedArr(&ma_device, ran_host.sr);
-
-  initHostInpalse(&ip_host, ran_host.sr, pml, ip_host.mode, ip_host.in.x, ip_host.in.y, ip_host.in.z, ip_host.freq);//
-  initDeviceInpalse(&ip_device, ran_device.sr, pml, ip_device.mode, ip_device.in.x, ip_device.in.y, ip_device.in.z, ip_device.freq);//
-  printf("in:%d,%d,%d\n", ip_host.in.x, ip_host.in.y, ip_host.in.z);
+  // 媒質メモリ確保
+  initHostMedArr(&ma, ran.sr);
+  // 入力情報メモリ確保
+  initHostInpalse(&ip, ran.sr, pml, ip.mode, ip.in.x, ip.in.y, ip.in.z, ip.freq);//
+  // 入力情報出力(複数地点になったら要変更)
+  printf("in:%d,%d,%d\n", ip.in.x, ip.in.y, ip.in.z);
+  if(ip.mode == E_SINE){
+    printf("sin:%f\n", ip.freq);
+  } else if(ip.mode == E_RCOS){
+    printf("cos:%f\n", ip.freq);
+  }
+  // 計測地点出力
   for(int outnum = 0; outnum < outNum; outnum++){
     printf("out:%d,%d,%d\n",out[outnum].x,out[outnum].y,out[outnum].z);
   }
-  if(ip_host.mode == E_SINE){
-    printf("sin:%f\n", ip_host.freq);
-  } else if(ip_host.mode == E_RCOS){
-    printf("cos:%f\n", ip_host.freq);
-  }
 
-  insertAir(&ma_host, ran_host.sr, med[E_AIR]);
-  insertConcrete(&ma_host, con);//maに格納
+  insertAir(&ma, ran.sr, med[E_AIR]);
+  printf("airok\n");
+  insertConcrete(&ma, con);//maに格納
+  printf("conok\n");
+
   ratio = 10;
   max_Patern = con_size.x * con_size.y * con_size.z;
   // max_ClackPatern = (con_size.x - 2) * (con_size.y - 2) * (con_size.z - 2);
   clack_count = max_Patern * ratio / 100;
   if(ratio != 0){
     clack = (Object *)malloc(sizeof(Object) * clack_count);
+    printf("clackhalfok\n");
     initClack(clack,med[E_AIR], &pml, clack_st.x, clack_st.y, clack_st.z, clack_size.x, clack_size.y, clack_size.z);
+    
+
     printf("ratio:%d\n", ratio);
-    insertClack(&ma_host, clack, ratio);
+    insertClack(&ma, clack, ratio);
   }
-
-  insertPml(&ma_host, ran_host.sr, pml);
-  zeroPadding(&bef_host, ran_host);
-  zeroPadding(&aft_host, ran_host);
-
+  printf("inclackok\n");
+  insertPml(&ma, ran.sr, pml);
+  printf("pmlok\n");
+  zeroPadding(&bef, ran);
+  zeroPadding(&aft, ran);
+  printf("paddingok\n");
   if(ratio != 0){
     // model_count++;
     sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
@@ -132,30 +137,26 @@ int main(void) {
   // fp1 = fopen(fn1, "wb");
 
   Coord_acc A[256];
-  // int count,counter;
   
-
-  // 変数引き渡しcpu->gpu
-  // cudaMemcpy(&ma_host, &ma_device, sizeof(MedArr), cudaMemcpyHostToDevice);
-  // cudaMemcpy(&dif_host, &dif_device, sizeof(Diff), cudaMemcpyHostToDevice);
-  // cudaMemcpy(&ran_host, &ran_device, sizeof(Range), cudaMemcpyHostToDevice);
-  onceHtoD(&ma_host, &ma_device, &dif_host, &dif_device, &ran_host, &ran_device);
   for (int t = 0; t < tmax; t++) {
-    insertInpulse(&ip_host, dif_host, t);
-    loopHtoD(&ip_host, &ip_device, &aft_host, &aft_device, &bef_host, &bef_device, ran_host);
-    Vel(&aft_device, &bef_device, ma_device, dif_device, ran_device.vr, threads);
-    Sig(&aft_device, &bef_device, ma_device, dif_device, ran_device.sr, ip_device, t, threads);
-    Tau(&aft_device, &bef_device, ma_device, dif_device, ran_device.tr, threads);
-    loopDtoH(&aft_host, &aft_device, &bef_host, &bef_device, ran_host);
+    insertInpulse(&ip, dif, t);
+
+    Vel(&aft, &bef, ma, dif, ran, threads);
+    printf("okVel\n");
+
+    Sig(&aft, &bef, ma, dif, ran, ip, t, threads);
+    printf("okSig\n");
+    Tau(&aft, &bef, ma, dif, ran, threads);
+    printf("okTau\n");
 
     // 加速度算出＆書き込み
     for(int i = 0; i < outNum; i++){
-      Acc(&A[i],&aft_host, &bef_host, dif_host, out[i]);
+      Acc(&A[i],&aft, &bef, dif, out[i]);
       fprintf(fp1, "%le,%le,%le," , A[i].x,A[i].y,A[i].z);
     }
     fprintf(fp1,"\n");
 
-    swapBefAft(&aft_host, &bef_host, ran_host);
+    swapBefAft(&aft, &bef, ran);
     progressBar(t, tmax);
   }
   fclose(fp1);
