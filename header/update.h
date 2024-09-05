@@ -50,5 +50,5 @@ void Vz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads)
 void Vel(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads);
 
 
-void Acc(Coord_acc *A,BefAft *aft, BefAft *bef, Diff dif, Coord out);
+void Acceleration(Coord_acc *Acc,BefAft *aft, BefAft *bef, Diff dif, Coord out);
 void swapBefAft(BefAft *aft, BefAft *bef, Range ran);

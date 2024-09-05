@@ -126,8 +126,6 @@ int main(void) {
     // for(int i = 0; i < clack_count; i++){
     //   fprintf(fp1, "%d,%d,%d,", clack[i].sp.x, clack[i].sp.y, clack[i].sp.z, clack[i].range.x,clack[i].range.y, clack[i].range.z);
     // }
-  } else {
-    sprintf(fn1, "./%d_%d_%d_cos/first_con.csv",tmax, region.x, con_size.x);
   }
   // fclose(fp1);
 
@@ -136,7 +134,7 @@ int main(void) {
   printf("%.*s\n", (int) sizeof fn1, fn1);
   // fp1 = fopen(fn1, "wb");
 
-  Coord_acc A[256];
+  Coord_acc Acc;
   
   for (int t = 0; t < tmax; t++) {
     insertInpulse(&ip, dif, t);
@@ -151,8 +149,8 @@ int main(void) {
 
     // 加速度算出＆書き込み
     for(int i = 0; i < outNum; i++){
-      Acc(&A[i],&aft, &bef, dif, out[i]);
-      fprintf(fp1, "%le,%le,%le," , A[i].x,A[i].y,A[i].z);
+      Acceleration(&Acc, &aft, &bef, dif, out[i]);
+      fprintf(fp1, "%le,%le,%le," , Acc.x,Acc.y,Acc.z);
     }
     fprintf(fp1,"\n");
 

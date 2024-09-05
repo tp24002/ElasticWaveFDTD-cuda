@@ -213,21 +213,24 @@ __global__ void DirectionalAdd(BefAft *aft, Inpaluse ip, Coord ranmax, char chec
 // Txxクラス的な(Blocks大丈夫かな？)
 void Txx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Inpaluse ip, int t, Coord threads) {
   char check = 'X';
-  Inpaluse *ip_d;
-  BefAft *bef_d;
-  BefAft *aft_d;
   Coord ranmax;
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
-  cudaMemcpy(&ip_d, &ip, sizeof(Inpaluse), cudaMemcpyHostToDevice);
-  zeroPadInpaluse(&ip, ran);
-  MemoryInpaluseToDevice(&ip, ip_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  Inpaluse ip_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d, sizeof(MedArr));
+  cudaMalloc((void **)&dif_d, sizeof(Diff));
+  cudaMalloc((void **)&ip_d, sizeof(Inpaluse));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
   int Txximax = ran.sr.Txx.x, Txxjmax = ran.sr.Txx.y, Txxkmax = ran.sr.Txx.z;
   initCoord(&ranmax, Txximax, Txxjmax, Txxkmax);
 
@@ -242,35 +245,37 @@ void Txx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Inpaluse ip, 
                             (Txxjmax + threadsPerBlock.y) / threadsPerBlock.y, 
                             (Txxkmax + threadsPerBlock.z) / threadsPerBlock.z);
   // Txx更新式
-  TxxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma, dif, ran.sr.Txx);
+  TxxUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ran.sr.Txx);
   // 0 padding
-  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
-  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
-  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
+  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
+  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
+  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
   //全方向加算
-  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip, ranmax, check);
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ip, ranmax, check);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // Tyyクラス的な(Blocks大丈夫かな？)
 void Tyy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Inpaluse ip, int t, Coord threads) {
-  
   char check = 'Y';
-  Inpaluse *ip_d;
-  BefAft *bef_d;
-  BefAft *aft_d;
   Coord ranmax;
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
-  cudaMemcpy(&ip_d, &ip, sizeof(Inpaluse), cudaMemcpyHostToDevice);
-  zeroPadInpaluse(&ip, ran);
-  MemoryInpaluseToDevice(&ip, ip_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  Inpaluse ip_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d, sizeof(MedArr));
+  cudaMalloc((void **)&dif_d, sizeof(Diff));
+  cudaMalloc((void **)&ip_d, sizeof(Inpaluse));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
   int Tyyimax = ran.sr.Tyy.x, Tyyjmax = ran.sr.Tyy.y, Tyykmax = ran.sr.Tyy.z;
   initCoord(&ranmax, Tyyimax, Tyyjmax, Tyykmax);
 
@@ -285,35 +290,39 @@ void Tyy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Inpaluse ip, 
                             (Tyyjmax + threadsPerBlock.y) / threadsPerBlock.y,
                             (Tyykmax + threadsPerBlock.z) / threadsPerBlock.z);
   // Tyy更新式
-  TyyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma, dif, ranmax);
+  TyyUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ranmax);
   // 0 padding
-  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
-  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
-  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
+  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
+  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
+  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
   // 全方向加算
-  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip, ranmax, check);
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ip, ranmax, check);
   // データ転送device to host
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // Tzzクラス的な(Blocks大丈夫かな？)
 void Tzz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Inpaluse ip, int t, Coord threads) {
   char check = 'Z';
-  Inpaluse *ip_d;
-  BefAft *bef_d;
-  BefAft *aft_d;
   Coord ranmax;
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
-  cudaMemcpy(&ip_d, &ip, sizeof(Inpaluse), cudaMemcpyHostToDevice);
-  zeroPadInpaluse(&ip, ran);
-  MemoryInpaluseToDevice(&ip, ip_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  Inpaluse ip_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d, sizeof(MedArr));
+  cudaMalloc((void **)&dif_d, sizeof(Diff));
+  cudaMalloc((void **)&ip_d, sizeof(Inpaluse));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
+
   int Tzzimax = ran.sr.Tzz.x, Tzzjmax = ran.sr.Tzz.y, Tzzkmax = ran.sr.Tzz.z;
   initCoord(&ranmax, Tzzimax, Tzzjmax, Tzzkmax);
   dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
@@ -327,16 +336,16 @@ void Tzz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Inpaluse ip, 
                             (Tzzjmax + threadsPerBlock.y) / threadsPerBlock.y,
                             (Tzzkmax + threadsPerBlock.z) / threadsPerBlock.z);
   // Tzzの更新式
-  TzzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma, dif, ranmax);
+  TzzUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ranmax);
   // 0 padding
-  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
-  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
-  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
+  ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
+  ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
+  ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(&aft_d, ranmax, check);
   // 全方向加算
-  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip, ranmax, check);
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ip, ranmax, check);
   // データ転送device to host
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // 垂直応力計算(main呼び出し関数)
 void Sig(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Inpaluse ip, int t, Coord threads) {
@@ -477,16 +486,21 @@ __global__ void DirectionalAddT(BefAft *aft, Coord Tmax, char check) {
 }
 // Txyクラス的な
 void Txy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads) {
-  BefAft *bef_d;
-  BefAft *aft_d;
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d , sizeof(MedArr));
+  cudaMalloc((void **)&dif_d , sizeof(Diff));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
   int Txyimax = ran.tr.Txy.x, Txyjmax = ran.tr.Txy.y, Txykmax = ran.tr.Txy.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -497,25 +511,30 @@ void Txy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads
   dim3 DirectionalAddBlocks((Txyimax + threadsPerBlock.x) / threadsPerBlock.x,
                             (Txyjmax + threadsPerBlock.y) / threadsPerBlock.y,
                             (Txykmax + threadsPerBlock.z) / threadsPerBlock.z);                    
-  TxyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma, dif, ran.tr);
-  ZeroTxy<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran.tr.Txy);
-  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Txy, 'Z');
+  TxyUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ran.tr);
+  ZeroTxy<<<ZeroXYBlocks, threadsPerBlock>>>(&aft_d, ran.tr.Txy);
+  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ran.tr.Txy, 'Z');
   // データ転送device to host
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // Tyzクラス的な
 void Tyz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads) {
-  BefAft *bef_d;
-  BefAft *aft_d;
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d , sizeof(MedArr));
+  cudaMalloc((void **)&dif_d , sizeof(Diff));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
   int Tyzimax = ran.tr.Tyz.x, Tyzjmax = ran.tr.Tyz.y, Tyzkmax = ran.tr.Tyz.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -526,25 +545,30 @@ void Tyz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads
   dim3 DirectionalAddBlocks((Tyzimax + threadsPerBlock.x) / threadsPerBlock.x,
                             (Tyzjmax + threadsPerBlock.y) / threadsPerBlock.y,
                             (Tyzkmax + threadsPerBlock.z) / threadsPerBlock.z);                    
-  TyzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma, dif, ran.tr);
-  ZeroTyz<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tyz);
-  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tyz, 'X');
+  TyzUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ran.tr);
+  ZeroTyz<<<ZeroYZBlocks, threadsPerBlock>>>(&aft_d, ran.tr.Tyz);
+  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ran.tr.Tyz, 'X');
   // データ転送device to host
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // Tzxクラス的な
 void Tzx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads) {
-  BefAft *bef_d;
-  BefAft *aft_d;
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d , sizeof(MedArr));
+  cudaMalloc((void **)&dif_d , sizeof(Diff));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
   int Tzximax = ran.tr.Tzx.x, Tzxjmax = ran.tr.Tzx.y, Tzxkmax = ran.tr.Tzx.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -555,12 +579,12 @@ void Tzx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads
   dim3 DirectionalAddBlocks((Tzximax + threadsPerBlock.x) / threadsPerBlock.x,
                             (Tzxjmax + threadsPerBlock.y) / threadsPerBlock.y, 
                             (Tzxkmax + threadsPerBlock.z) / threadsPerBlock.z);                  
-  TzxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef, ma, dif, ran.tr);
-  ZeroTzx<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tzx);
-  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tzx , 'Y');
+  TzxUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ran.tr);
+  ZeroTzx<<<ZeroZXBlocks, threadsPerBlock>>>(&aft_d, ran.tr.Tzx);
+  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ran.tr.Tzx , 'Y');
   // データ転送device to host
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // せん断応力計算(main呼び出し関数)
 void Tau(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads) {
@@ -753,27 +777,11 @@ void Vx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads)
   cudaMalloc((void **)&ma_d , sizeof(MedArr));
   cudaMalloc((void **)&dif_d , sizeof(Diff));
   // device構造体中身(メンバ)のメモリ確保関数
-  allocateBefAft(&aft_d, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
-  allocateBefAft(&bef_d, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
-  printf("%f\n",aft->va.Vx[72][73][73]);
-  // printf("%f\n",aft_d.va.Vx[72][73][73]);
-  if(aft_d.va.Vxx == NULL){
-    printf("nono\n");
-  }
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
   // host->deviceデータ転送
   copyBefAftToDevice(&aft_d, aft, ran);
   copyBefAftToDevice(&bef_d, bef, ran);
-  // printf("%lu\n",sizeof(bef_d));
-  
-  // // zeroPadding(&bef_d, ran);
-  // // zeroPadding(&aft_d, ran);
-  
-  // // initDeviceBefAft(&bef_d, ran);
-  // // initDeviceBefAft(&aft_d, ran);
-  // printf("ok2\n");
-  // MemoryBefAftToDevice(aft, &aft_d, ran);
-  // MemoryBefAftToDevice(bef, &bef_d, ran);
-  printf("ok3\n");
   int Vximax = ran.vr.Vx.x, Vxjmax = ran.vr.Vx.y, Vxkmax = ran.vr.Vx.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -793,22 +801,27 @@ void Vx(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads)
   ZeroVx_XZ<<<ZeroXZBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vx);
   DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vx , 'X');
   // device->hostデータ転送
-  MemoryBefAftToHost(aft, &aft_d, ran);
-  MemoryBefAftToHost(bef, &bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // Vyクラス的な
 void Vy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads) {
   
-  BefAft *bef_d;
-  BefAft *aft_d;
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d , sizeof(MedArr));
+  cudaMalloc((void **)&dif_d , sizeof(Diff));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
   int Vyimax = ran.vr.Vy.x, Vyjmax = ran.vr.Vy.y, Vykmax = ran.vr.Vy.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -822,29 +835,33 @@ void Vy(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads)
   dim3 DirectionalAddBlocks((Vyimax + threadsPerBlock.x) / threadsPerBlock.x,
                             (Vyjmax + threadsPerBlock.y) / threadsPerBlock.y, 
                             (Vykmax + threadsPerBlock.z) / threadsPerBlock.z);
-  VyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma, dif, ran.vr);
-  ZeroVy_YX<<<ZeroYXBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vy);
-  ZeroVy_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vy);
+  VyUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ran.vr);
+  ZeroVy_YX<<<ZeroYXBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vy);
+  ZeroVy_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vy);
   //全方向加算
-  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vy , 'Y');
+  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vy , 'Y');
   // データ転送device to host
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 // Vzクラス的な
 void Vz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads) {
   
-  BefAft *bef_d;
-  BefAft *aft_d;
-  
-  cudaMemcpy(&aft_d, &aft, sizeof(BefAft), cudaMemcpyHostToDevice);
-  cudaMemcpy(&bef_d, &bef, sizeof(BefAft), cudaMemcpyHostToDevice);
-  zeroPadding(bef_d, ran);
-  zeroPadding(aft_d, ran);
-  initDeviceBefAft(bef_d, ran);
-  initDeviceBefAft(aft_d, ran);
-  MemoryBefAftToDevice(aft, aft_d, ran);
-  MemoryBefAftToDevice(bef, bef_d, ran);
+  BefAft bef_d;
+  BefAft aft_d;
+  MedArr ma_d;
+  Diff dif_d;
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d , sizeof(MedArr));
+  cudaMalloc((void **)&dif_d , sizeof(Diff));
+  // device構造体中身(メンバ)のメモリ確保関数
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  // host->deviceデータ転送
+  copyBefAftToDevice(&aft_d, aft, ran);
+  copyBefAftToDevice(&bef_d, bef, ran);
   int Vzimax = ran.vr.Vz.x, Vzjmax = ran.vr.Vz.y, Vzkmax = ran.vr.Vz.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -858,14 +875,14 @@ void Vz(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads)
   dim3 DirectionalAddBlocks((Vzimax + threadsPerBlock.x) / threadsPerBlock.x,
                             (Vzjmax + threadsPerBlock.y) / threadsPerBlock.y, 
                             (Vzkmax + threadsPerBlock.z) / threadsPerBlock.z);                    
-  VzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma, dif, ran.vr);
-  ZeroVz_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vz);
-  ZeroVz_ZY<<<ZeroZYBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vz);
+  VzUpdate<<<UpdateBlocks, threadsPerBlock>>>(&aft_d, &bef_d, ma, dif, ran.vr);
+  ZeroVz_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vz);
+  ZeroVz_ZY<<<ZeroZYBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vz);
   //全方向加算
-  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vz , 'Z');
+  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(&aft_d, ran.vr.Vz , 'Z');
   // データ転送device to host
-  MemoryBefAftToHost(aft, aft_d, ran);
-  MemoryBefAftToHost(bef, bef_d, ran);
+  copyBefAftToHost(aft, &aft_d, ran);
+  copyBefAftToHost(bef, &bef_d, ran);
 }
 //粒子速度計算
 void Vel(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads) {
@@ -874,11 +891,10 @@ void Vel(BefAft *aft, BefAft *bef, MedArr ma, Diff dif, Range ran, Coord threads
   Vz(aft, bef, ma, dif, ran, threads);
 }
 
-void Acc(Coord_acc *A,BefAft *aft, BefAft *bef, Diff dif, Coord out){
-  A->x = ((aft->va.Vx[out.x - 1][out.y][out.z] - bef->va.Vx[out.x - 1][out.y][out.z]) / dif.dt  + (aft->va.Vx[out.x][out.y][out.z] - bef->va.Vx[out.x][out.y][out.z]) / dif.dt) / 2;
-  A->y = ((aft->va.Vy[out.x][out.y - 1][out.z] - bef->va.Vy[out.x][out.y - 1][out.z]) / dif.dt  + (aft->va.Vy[out.x][out.y][out.z] - bef->va.Vy[out.x][out.y][out.z]) / dif.dt) / 2;
-  A->z = ((aft->va.Vz[out.x][out.y][out.z - 1] - bef->va.Vz[out.x][out.y][out.z - 1]) / dif.dt  + (aft->va.Vz[out.x][out.y][out.z] - bef->va.Vz[out.x][out.y][out.z]) / dif.dt) / 2;
-
+void Acceleration(Coord_acc *Acc,BefAft *aft, BefAft *bef, Diff dif, Coord out){
+  Acc->x = ((aft->va.Vx[out.x - 1][out.y][out.z] - bef->va.Vx[out.x - 1][out.y][out.z]) / dif.dt  + (aft->va.Vx[out.x][out.y][out.z] - bef->va.Vx[out.x][out.y][out.z]) / dif.dt) / 2;
+  Acc->y = ((aft->va.Vy[out.x][out.y - 1][out.z] - bef->va.Vy[out.x][out.y - 1][out.z]) / dif.dt  + (aft->va.Vy[out.x][out.y][out.z] - bef->va.Vy[out.x][out.y][out.z]) / dif.dt) / 2;
+  Acc->z = ((aft->va.Vz[out.x][out.y][out.z - 1] - bef->va.Vz[out.x][out.y][out.z - 1]) / dif.dt  + (aft->va.Vz[out.x][out.y][out.z] - bef->va.Vz[out.x][out.y][out.z]) / dif.dt) / 2;
 }
 //更新
 void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
@@ -892,9 +908,9 @@ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
   int Vximax = ran.vr.Vx.x, Vxjmax = ran.vr.Vx.y, Vxkmax = ran.vr.Vx.z;
   int Vyimax = ran.vr.Vy.x, Vyjmax = ran.vr.Vy.y, Vykmax = ran.vr.Vy.z;
   int Vzimax = ran.vr.Vz.x, Vzjmax = ran.vr.Vz.y, Vzkmax = ran.vr.Vz.z;
-  for (k = 0; k <= Txxkmax; k++) {
-    for (j = 0; j <= Txxjmax; j++) {
-      for (i = 0; i <= Txximax; i++) {
+  for (k = 0; k < Txxkmax; k++) {
+    for (j = 0; j < Txxjmax; j++) {
+      for (i = 0; i < Txximax; i++) {
         bef->sa.Txx[i][j][k] = aft->sa.Txx[i][j][k];
         bef->sa.Txxx[i][j][k] = aft->sa.Txxx[i][j][k];
         bef->sa.Txxy[i][j][k] = aft->sa.Txxy[i][j][k];
@@ -902,9 +918,9 @@ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
       }
     }
   }
-  for (k = 0; k <= Tyykmax; k++) {
-    for (j = 0; j <= Tyyjmax; j++) {
-      for (i = 0; i <= Tyyimax; i++) {
+  for (k = 0; k < Tyykmax; k++) {
+    for (j = 0; j < Tyyjmax; j++) {
+      for (i = 0; i < Tyyimax; i++) {
         bef->sa.Tyy[i][j][k] = aft->sa.Tyy[i][j][k];
         bef->sa.Tyyx[i][j][k] = aft->sa.Tyyx[i][j][k];
         bef->sa.Tyyy[i][j][k] = aft->sa.Tyyy[i][j][k];
@@ -912,9 +928,9 @@ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
       }
     }
   }
-  for (k = 0; k <= Tzzkmax; k++) {
-    for (j = 0; j <= Tzzjmax; j++) {
-      for (i = 0; i <= Tzzimax; i++) {
+  for (k = 0; k < Tzzkmax; k++) {
+    for (j = 0; j < Tzzjmax; j++) {
+      for (i = 0; i < Tzzimax; i++) {
         bef->sa.Tzz[i][j][k] = aft->sa.Tzz[i][j][k];
         bef->sa.Tzzx[i][j][k] = aft->sa.Tzzx[i][j][k];
         bef->sa.Tzzy[i][j][k] = aft->sa.Tzzy[i][j][k];
@@ -922,36 +938,36 @@ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
       }
     }
   }
-  for (i = 0; i <= Txyimax; i++) {
-    for (j = 0; j <= Txyjmax; j++) {
-      for (k = 0; k <= Txykmax; k++) {
+  for (i = 0; i < Txyimax; i++) {
+    for (j = 0; j < Txyjmax; j++) {
+      for (k = 0; k < Txykmax; k++) {
         bef->ta.Txy[i][j][k] = aft->ta.Txy[i][j][k];
         bef->ta.Txyx[i][j][k] = aft->ta.Txyx[i][j][k];
         bef->ta.Txyy[i][j][k] = aft->ta.Txyy[i][j][k];
       }
     }
   }
-  for (i = 0; i <= Tyzimax; i++) {
-    for (j = 0; j <= Tyzjmax; j++) {
-      for (k = 0; k <= Tyzkmax; k++) {
+  for (i = 0; i < Tyzimax; i++) {
+    for (j = 0; j < Tyzjmax; j++) {
+      for (k = 0; k < Tyzkmax; k++) {
         bef->ta.Tyz[i][j][k] = aft->ta.Tyz[i][j][k];
         bef->ta.Tyzy[i][j][k] = aft->ta.Tyzy[i][j][k];
         bef->ta.Tyzz[i][j][k] = aft->ta.Tyzz[i][j][k];
       }
     }
   }
-  for (i = 0; i <= Tzximax; i++) {
-    for (j = 0; j <= Tzxjmax; j++) {
-      for (k = 0; k <= Tzxkmax; k++) {
+  for (i = 0; i < Tzximax; i++) {
+    for (j = 0; j < Tzxjmax; j++) {
+      for (k = 0; k < Tzxkmax; k++) {
         bef->ta.Tzx[i][j][k] = aft->ta.Tzx[i][j][k];
         bef->ta.Tzxz[i][j][k] = aft->ta.Tzxz[i][j][k];
         bef->ta.Tzxx[i][j][k] = aft->ta.Tzxx[i][j][k];
       }
     }
   }
-  for (k = 0; k <= Vxkmax; k++) {
-    for (j = 0; j <= Vxjmax; j++) {
-      for (i = 0; i <= Vximax; i++) {
+  for (k = 0; k < Vxkmax; k++) {
+    for (j = 0; j < Vxjmax; j++) {
+      for (i = 0; i < Vximax; i++) {
         bef->va.Vx[i][j][k] = aft->va.Vx[i][j][k];
         bef->va.Vxx[i][j][k] = aft->va.Vxx[i][j][k];
         bef->va.Vxy[i][j][k] = aft->va.Vxy[i][j][k];
@@ -959,9 +975,9 @@ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
       }
     }
   }
-  for (k = 0; k <= Vykmax; k++) {
-    for (j = 0; j <= Vyjmax; j++) {
-      for (i = 0; i <= Vyimax; i++) {
+  for (k = 0; k < Vykmax; k++) {
+    for (j = 0; j < Vyjmax; j++) {
+      for (i = 0; i < Vyimax; i++) {
         bef->va.Vy[i][j][k] = aft->va.Vy[i][j][k];
         bef->va.Vyx[i][j][k] = aft->va.Vyx[i][j][k];
         bef->va.Vyy[i][j][k] = aft->va.Vyy[i][j][k];
@@ -969,9 +985,9 @@ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
       }
     }
   }
-  for (k = 0; k <= Vzkmax; k++) {
-    for (j = 0; j <= Vzjmax; j++) {
-      for (i = 0; i <= Vzimax; i++) {
+  for (k = 0; k < Vzkmax; k++) {
+    for (j = 0; j < Vzjmax; j++) {
+      for (i = 0; i < Vzimax; i++) {
         bef->va.Vz[i][j][k] = aft->va.Vz[i][j][k];
         bef->va.Vzx[i][j][k] = aft->va.Vzx[i][j][k];
         bef->va.Vzy[i][j][k] = aft->va.Vzy[i][j][k];
