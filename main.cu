@@ -20,12 +20,18 @@ int main(void) {
   Object *clack;
   Range ran;
   Pml pml;
-  Diff dif;
-  MedArr ma;
   //host data(cpu)
-  BefAft bef;
-  BefAft aft;
-  Inpaluse ip;
+  Diff dif_h;
+  MedArr ma_h;
+  BefAft bef_h;
+  BefAft aft_h;
+  Inpaluse ip_h;
+  //device data(gpu)
+  Diff dif_d;
+  MedArr ma_d;
+  BefAft bef_d;
+  BefAft aft_d;
+  Inpaluse ip_d;
   // Coord out1,out2,out3,out4;
   FILE *fp1;
   // FILE *fp1,*fp2,*fp3,*fp4;
@@ -50,19 +56,19 @@ int main(void) {
   Coord threads;
 
   // スレッド数
-  initCoord(&threads, 128, 128, 128);
+  initCoord(&threads, 4, 4, 8);
   // 外部入力
-  para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip,&outNum,&tmax);
+  para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip_h,&outNum,&tmax);
   printf("region:(%d,%d,%d)\n", region.x, region.y, region.z);
   // 媒質パターン設定
   initMedium(med);
   printf("med[E_CON].gamma = %le\n", med[E_CON].gamma);
   printf("med[E_CON].khi = %le\n", med[E_CON].khi);
   // 差分間隔設定(initで直入力しているためinsertなし)
-  initDiff(&dif, med);
-  printf("dif.dt = %le\n", dif.dt);
+  initDiff(&dif_h, med);
+  printf("dif.dt = %le\n", dif_h.dt);
   // pml層設定
-  initPml(&pml, med, dif);
+  initPml(&pml, med, dif_h);
   printf("pml.fm = %le\n", pml.fm);
   // コンクリート配置
   initConcrete(&con, med[E_CON], pml, con_st.x, con_st.y, con_st.z, con_size.x, con_size.y, con_size.z);//x:+5,-5 y:+3,-3 z:+2,-0
@@ -74,29 +80,28 @@ int main(void) {
   initRange(&ran, region.x, region.y, region.z, pml);
   // hostメモリ確保
   // bef = (BefAft *)malloc(sizeof(BefAft));
-  initHostBefAft(&bef, ran);
-  initHostBefAft(&aft, ran);
-  printf("%lu\n",sizeof(bef));
+  initHostBefAft(&bef_h, ran);
+  initHostBefAft(&aft_h, ran);
 
   // 媒質メモリ確保
-  initHostMedArr(&ma, ran.sr);
+  initHostMedArr(&ma_h, ran.sr);
   // 入力情報メモリ確保
-  initHostInpalse(&ip, ran.sr, pml, ip.mode, ip.in.x, ip.in.y, ip.in.z, ip.freq);//
+  initHostInpalse(&ip_h, ran.sr, pml, ip_h.mode, ip_h.in.x, ip_h.in.y, ip_h.in.z, ip_h.freq);//
   // 入力情報出力(複数地点になったら要変更)
-  printf("in:%d,%d,%d\n", ip.in.x, ip.in.y, ip.in.z);
-  if(ip.mode == E_SINE){
-    printf("sin:%f\n", ip.freq);
-  } else if(ip.mode == E_RCOS){
-    printf("cos:%f\n", ip.freq);
+  printf("in:%d,%d,%d\n", ip_h.in.x, ip_h.in.y, ip_h.in.z);
+  if(ip_h.mode == E_SINE){
+    printf("sin:%f\n", ip_h.freq);
+  } else if(ip_h.mode == E_RCOS){
+    printf("cos:%f\n", ip_h.freq);
   }
   // 計測地点出力
   for(int outnum = 0; outnum < outNum; outnum++){
     printf("out:%d,%d,%d\n",out[outnum].x,out[outnum].y,out[outnum].z);
   }
 
-  insertAir(&ma, ran.sr, med[E_AIR]);
+  insertAir(&ma_h, ran.sr, med[E_AIR]);
   printf("airok\n");
-  insertConcrete(&ma, con);//maに格納
+  insertConcrete(&ma_h, con);//maに格納
   printf("conok\n");
 
   ratio = 10;
@@ -110,13 +115,13 @@ int main(void) {
     
 
     printf("ratio:%d\n", ratio);
-    insertClack(&ma, clack, ratio);
+    insertClack(&ma_h, clack, ratio);
   }
   printf("inclackok\n");
-  insertPml(&ma, ran.sr, pml);
+  insertPml(&ma_h, ran.sr, pml);
   printf("pmlok\n");
-  zeroPadding(&bef, ran);
-  zeroPadding(&aft, ran);
+  zeroPadding(&bef_h, ran);
+  zeroPadding(&aft_h, ran);
   printf("paddingok\n");
   if(ratio != 0){
     // model_count++;
@@ -135,26 +140,42 @@ int main(void) {
   // fp1 = fopen(fn1, "wb");
 
   Coord_acc Acc;
-  
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d, sizeof(MedArr));
+  cudaMalloc((void **)&dif_d, sizeof(Diff));
+  cudaMalloc((void **)&ip_d, sizeof(Inpaluse));
+  // device構造体中身(メンバ)のメモリ確保関数
+  printf("aloocate no\n");
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  printf("aloocate BefAft ok\n");
+  allocateMedArr(&ma_d, ran);
+  printf("aloocate MedArr ok\n");
+  allocateInpaluse(&ip_d, ran);
+  printf("aloocate Inpaluse ok\n");
+
   for (int t = 0; t < tmax; t++) {
-    insertInpulse(&ip, dif, t);
+    insertInpulse(&ip_h, dif_h, t);
+    copyInpaluseToDevice(&ip_d, &ip_h, ran);
 
-    Vel(&aft, &bef, ma, dif, ran, threads);
-    printf("okVel\n");
+    Vel(&aft_h, &bef_h, &aft_d, &bef_d, ma_h, &ma_d, dif_h, &dif_d, ran, threads);
+    // printf("okVel\n");
 
-    Sig(&aft, &bef, ma, dif, ran, ip, t, threads);
-    printf("okSig\n");
-    Tau(&aft, &bef, ma, dif, ran, threads);
-    printf("okTau\n");
+    Sig(&aft_h, &bef_h, &aft_d, &bef_d, ma_h, &ma_d, dif_h, &dif_d, ran, ip_h, &ip_d, t, threads);
+    // printf("okSig\n");
+    Tau(&aft_h, &bef_h, &aft_d, &bef_d, ma_h, &ma_d, dif_h, &dif_d, ran, threads);
+    // printf("okTau\n");
 
     // 加速度算出＆書き込み
     for(int i = 0; i < outNum; i++){
-      Acceleration(&Acc, &aft, &bef, dif, out[i]);
+      Acceleration(&Acc, &aft_h, &bef_h, dif_h, out[i]);
       fprintf(fp1, "%le,%le,%le," , Acc.x,Acc.y,Acc.z);
     }
     fprintf(fp1,"\n");
 
-    swapBefAft(&aft, &bef, ran);
+    swapBefAft(&aft_h, &bef_h, ran);
     progressBar(t, tmax);
   }
   fclose(fp1);

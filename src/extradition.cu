@@ -7,6 +7,9 @@
 
 #include "../header/struct.h"
 
+////// メモリ確保
+
+// 3d array メモリ確保
 void allocate3DArray(double ****array, int x, int y, int z) {
     // 1. ホスト側のポインタをデバイス側に転送するためのメモリを確保
     double ***temp_array;
@@ -26,7 +29,7 @@ void allocate3DArray(double ****array, int x, int y, int z) {
     // ホスト側のポインタにデバイスのポインタを設定
     *array = temp_array;
 }
-
+// メモリ確保 BefAft
 void allocateBefAft(BefAft *d_befAft, Range ran) {
     // メモリをGPUに割り当て
     cudaMalloc((void **)&(d_befAft->sa), sizeof(SigArr));
@@ -73,6 +76,47 @@ void allocateBefAft(BefAft *d_befAft, Range ran) {
     allocate3DArray(&d_befAft->va.Vzz, ran.vr.Vz.x, ran.vr.Vz.y, ran.vr.Vz.z);
 }
 
+// メモリ確保 MedArr
+void allocateMedArr(MedArr *d_medArr, Range ran) {
+    // 各メンバ変数のメモリをGPUに割り当て
+    allocate3DArray(&d_medArr->ramda, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->mu, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->c11, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->rho, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+
+    // ゼータ（zetaxx, zetaxy, など）のメモリをGPUに割り当て
+    allocate3DArray(&d_medArr->zetaxx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetaxy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetaxz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetayx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetayy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetayz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetazx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetazy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetazz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+
+    // その他のメンバ変数のメモリをGPUに割り当て
+    allocate3DArray(&d_medArr->gamma, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->khi, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->xi11, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetadx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetady, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetadz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+}
+
+// メモリ確保 Inpaluse
+void allocateInpaluse(Inpaluse *d_inpaluse, Range ran) {
+    cudaMalloc((void **)&(d_inpaluse->in), sizeof(Coord));
+
+    allocate3DArray(&d_inpaluse->Txx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_inpaluse->Tyy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_inpaluse->Tzz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+}
+
+
+////// データ転送 ホスト->デバイス
+
+// 3d array ホスト->デバイス
 void copy3DArrayToDevice(double ***d_array, double ***h_array, int x, int y, int z) {
     // 1. ホスト側の配列をデバイス側にコピーするための準備
     double **d_row;
@@ -92,7 +136,7 @@ void copy3DArrayToDevice(double ***d_array, double ***h_array, int x, int y, int
         }
     }
 }
-
+// ホスト->デバイス BefAft
 void copyBefAftToDevice(BefAft *d_befAft, BefAft *h_befAft, Range ran) {
     int Txxi = ran.sr.Txx.x, Txxj = ran.sr.Txx.y, Txxk = ran.sr.Txx.z;
     int Tyyi = ran.sr.Tyy.x, Tyyj = ran.sr.Tyy.y, Tyyk = ran.sr.Tyy.z;
@@ -141,7 +185,56 @@ void copyBefAftToDevice(BefAft *d_befAft, BefAft *h_befAft, Range ran) {
     copy3DArrayToDevice(d_befAft->va.Vzy, h_befAft->va.Vzy, Vzi, Vzj, Vzk);
     copy3DArrayToDevice(d_befAft->va.Vzz, h_befAft->va.Vzz, Vzi, Vzj, Vzk);
 }
+// ホスト->デバイス Inpaluse
+void copyInpaluseToDevice(Inpaluse *d_inpaluse, Inpaluse *h_inpaluse, Range ran) {
+    int Txxi = ran.sr.Txx.x, Txxj = ran.sr.Txx.y, Txxk = ran.sr.Txx.z;
+    int Tyyi = ran.sr.Tyy.x, Tyyj = ran.sr.Tyy.y, Tyyk = ran.sr.Tyy.z;
+    int Tzzi = ran.sr.Tzz.x, Tzzj = ran.sr.Tzz.y, Tzzk = ran.sr.Tzz.z;
 
+    // 3D配列データの転送 (Txx, Tyy, Tzz)
+    copy3DArrayToDevice(d_inpaluse->Txx, h_inpaluse->Txx, Txxi, Txxj, Txxk);
+    copy3DArrayToDevice(d_inpaluse->Tyy, h_inpaluse->Tyy, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToDevice(d_inpaluse->Tzz, h_inpaluse->Tzz, Tzzi, Tzzj, Tzzk);
+
+    cudaMemcpy(&(d_inpaluse->freq), &(h_inpaluse->freq), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_inpaluse->mode), &(h_inpaluse->mode), sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_inpaluse->in), &(h_inpaluse->in), sizeof(Coord), cudaMemcpyHostToDevice);
+}
+// ホスト->デバイス MedArr
+void copyMedArrToDevice(MedArr *d_medArr, MedArr *h_medArr, Range ran) {
+    int xi = ran.sr.Txx.x, xj = ran.sr.Txx.y, xk = ran.sr.Txx.z;
+
+    copy3DArrayToDevice(d_medArr->ramda, h_medArr->ramda, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->mu, h_medArr->mu, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->c11, h_medArr->c11, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->rho, h_medArr->rho, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetaxx, h_medArr->zetaxx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetaxy, h_medArr->zetaxy, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetaxz, h_medArr->zetaxz, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetayx, h_medArr->zetayx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetayy, h_medArr->zetayy, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetayz, h_medArr->zetayz, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetazx, h_medArr->zetazx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetazy, h_medArr->zetazy, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetazz, h_medArr->zetazz, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->gamma, h_medArr->gamma, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->khi, h_medArr->khi, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->xi11, h_medArr->xi11, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetadx, h_medArr->zetadx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetady, h_medArr->zetady, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetadz, h_medArr->zetadz, xi, xj, xk);
+}
+// ホスト->デバイス Diff
+void copyDiffToDevice(Diff *d_diff, Diff *h_diff) {
+    cudaMemcpy(&(d_diff->dx), &(h_diff->dx), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_diff->dy), &(h_diff->dy), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_diff->dz), &(h_diff->dz), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_diff->dt), &(h_diff->dt), sizeof(double), cudaMemcpyHostToDevice);
+}
+
+////// データ転送 デバイス->ホスト
+
+// 3d array デバイス->ホスト
 void copy3DArrayToHost(double ***h_array, double ***d_array, int x, int y, int z) {
     // 1. ホスト側の配列を受け取る準備
     double **d_row;
@@ -161,7 +254,7 @@ void copy3DArrayToHost(double ***h_array, double ***d_array, int x, int y, int z
         }
     }
 }
-
+// デバイス->ホスト BefAft
 void copyBefAftToHost(BefAft *h_befAft, BefAft *d_befAft, Range ran) {
     int Txxi = ran.sr.Txx.x, Txxj = ran.sr.Txx.y, Txxk = ran.sr.Txx.z;
     int Tyyi = ran.sr.Tyy.x, Tyyj = ran.sr.Tyy.y, Tyyk = ran.sr.Tyy.z;
@@ -210,3 +303,4 @@ void copyBefAftToHost(BefAft *h_befAft, BefAft *d_befAft, Range ran) {
     copy3DArrayToHost(h_befAft->va.Vzy, d_befAft->va.Vzy, Vzi, Vzj, Vzk);
     copy3DArrayToHost(h_befAft->va.Vzz, d_befAft->va.Vzz, Vzi, Vzj, Vzk);
 }
+
