@@ -54,12 +54,21 @@ int main(void) {
   // int max_ClackPatern; // 欠陥を配置できる最大のパターン数
   int clack_count; // 割合による欠陥数
   Coord threads;
-
+  Coord_acc **Acc_h, **Acc_d;
   // スレッド数
   initCoord(&threads, 4, 4, 8);
   // 外部入力
   para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip_h,&outNum,&tmax);
   printf("region:(%d,%d,%d)\n", region.x, region.y, region.z);
+  // 加速度メモリ確保
+  Acc_h = (Coord_acc **)malloc(sizeof(Coord_acc *) * outNum);
+  for (int i = 0; i < outNum; i++) {
+      Acc_h[i] = (Coord_acc *)malloc(tmax * sizeof(Coord_acc));
+  }
+  cudaMalloc((void **)&Acc_d, outNum * sizeof(Coord_acc *));
+  for (int i = 0; i < outNum; i++) {
+    cudaMalloc((void **)&Acc_h[i], tmax * sizeof(Coord_acc));
+  }
   // 媒質パターン設定
   initMedium(med);
   printf("med[E_CON].gamma = %le\n", med[E_CON].gamma);
@@ -139,7 +148,6 @@ int main(void) {
   printf("%.*s\n", (int) sizeof fn1, fn1);
   // fp1 = fopen(fn1, "wb");
 
-  Coord_acc Acc;
   // device構造体本体のメモリ確保
   cudaMalloc((void **)&aft_d, sizeof(BefAft));
   cudaMalloc((void **)&bef_d, sizeof(BefAft));
@@ -169,14 +177,19 @@ int main(void) {
     // printf("okTau\n");
 
     // 加速度算出＆書き込み
-    for(int i = 0; i < outNum; i++){
-      Acceleration(&Acc, &aft_h, &bef_h, dif_h, out[i]);
-      fprintf(fp1, "%le,%le,%le," , Acc.x,Acc.y,Acc.z);
-    }
-    fprintf(fp1,"\n");
+    Acceleration<<<1, 1>>>(Acc_d, &aft_d, &bef_d, dif_h, out, outNum, t);
 
-    swapBefAft(&aft_h, &bef_h, ran);
+    swapBefAft<<<1, 1>>>(&aft_d, &bef_d, ran);
     progressBar(t, tmax);
+  }
+  cudaMemcpy(Acc_d, Acc_h, outNum * sizeof(Coord_acc *), cudaMemcpyDeviceToHost);
+  for (int j = 0; j < tmax; j++) {
+    for (int i = 0; i < outNum; i++) {
+      printf("ok\n");
+      fprintf(fp1,"%le,%le,%le,", Acc_h[i][j].x, Acc_h[i][j].y, Acc_h[i][j].z);
+    }
+    fprintf(fp1, "\n");
+    progressBar(j, tmax);
   }
   fclose(fp1);
   printf("loop end.\n");

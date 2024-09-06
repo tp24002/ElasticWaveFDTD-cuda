@@ -303,4 +303,3 @@ void copyBefAftToHost(BefAft *h_befAft, BefAft *d_befAft, Range ran) {
     copy3DArrayToHost(h_befAft->va.Vzy, d_befAft->va.Vzy, Vzi, Vzj, Vzk);
     copy3DArrayToHost(h_befAft->va.Vzz, d_befAft->va.Vzz, Vzi, Vzj, Vzk);
 }
-

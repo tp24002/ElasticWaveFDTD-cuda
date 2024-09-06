@@ -242,8 +242,8 @@ void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
   //全方向加算
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Tyyクラス的な(Blocks大丈夫かな？)
 void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads) {
@@ -278,8 +278,8 @@ void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   // 全方向加算
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
   // データ転送device to host
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Tzzクラス的な(Blocks大丈夫かな？)
 void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads) {
@@ -313,8 +313,8 @@ void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   // 全方向加算
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
   // データ転送device to host
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // 垂直応力計算(main呼び出し関数)
 void Sig(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads) {
@@ -476,8 +476,8 @@ void Txy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   ZeroTxy<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran.tr.Txy);
   DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Txy, 'Z');
   // データ転送device to host
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Tyzクラス的な
 void Tyz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
@@ -502,8 +502,8 @@ void Tyz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   ZeroTyz<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tyz);
   DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tyz, 'X');
   // データ転送device to host
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Tzxクラス的な
 void Tzx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
@@ -528,8 +528,8 @@ void Tzx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   ZeroTzx<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tzx);
   DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tzx , 'Y');
   // データ転送device to host
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // せん断応力計算(main呼び出し関数)
 void Tau(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
@@ -737,8 +737,8 @@ void Vx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   ZeroVx_XZ<<<ZeroXZBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vx);
   DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vx , 'X');
   // device->hostデータ転送
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Vyクラス的な
 void Vy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
@@ -768,8 +768,8 @@ void Vy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   //全方向加算
   DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vy , 'Y');
   // データ転送device to host
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Vzクラス的な
 void Vz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
@@ -799,8 +799,8 @@ void Vz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   //全方向加算
   DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vz , 'Z');
   // データ転送device to host
-  copyBefAftToHost(aft_h, aft_d, ran);
-  copyBefAftToHost(bef_h, bef_d, ran);
+  // copyBefAftToHost(aft_h, aft_d, ran);
+  // copyBefAftToHost(bef_h, bef_d, ran);
 }
 //粒子速度計算
 void Vel(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
@@ -809,13 +809,18 @@ void Vel(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   Vz(aft_h, bef_h, aft_d, bef_d, ma_h, ma_d, dif_h, dif_d, ran, threads);
 }
 
-void Acceleration(Coord_acc *Acc,BefAft *aft, BefAft *bef, Diff dif, Coord out){
-  Acc->x = ((aft->va.Vx[out.x - 1][out.y][out.z] - bef->va.Vx[out.x - 1][out.y][out.z]) / dif.dt  + (aft->va.Vx[out.x][out.y][out.z] - bef->va.Vx[out.x][out.y][out.z]) / dif.dt) / 2;
-  Acc->y = ((aft->va.Vy[out.x][out.y - 1][out.z] - bef->va.Vy[out.x][out.y - 1][out.z]) / dif.dt  + (aft->va.Vy[out.x][out.y][out.z] - bef->va.Vy[out.x][out.y][out.z]) / dif.dt) / 2;
-  Acc->z = ((aft->va.Vz[out.x][out.y][out.z - 1] - bef->va.Vz[out.x][out.y][out.z - 1]) / dif.dt  + (aft->va.Vz[out.x][out.y][out.z] - bef->va.Vz[out.x][out.y][out.z]) / dif.dt) / 2;
+__global__ void Acceleration(Coord_acc **Acc,BefAft *aft, BefAft *bef, Diff dif, Coord *out,int outnum, int t) {
+  for(int i = 0; i < outnum; i++) {
+    Acc[i][t].x = ((aft->va.Vx[out[i].x - 1][out[i].y][out[i].z] - bef->va.Vx[out[i].x - 1][out[i].y][out[i].z]) / dif.dt
+                         + (aft->va.Vx[out[i].x][out[i].y][out[i].z] - bef->va.Vx[out[i].x][out[i].y][out[i].z]) / dif.dt) / 2;
+    Acc[i][t].y = ((aft->va.Vy[out[i].x][out[i].y - 1][out[i].z] - bef->va.Vy[out[i].x][out[i].y - 1][out[i].z]) / dif.dt
+                         + (aft->va.Vy[out[i].x][out[i].y][out[i].z] - bef->va.Vy[out[i].x][out[i].y][out[i].z]) / dif.dt) / 2;
+    Acc[i][t].z = ((aft->va.Vz[out[i].x][out[i].y][out[i].z - 1] - bef->va.Vz[out[i].x][out[i].y][out[i].z - 1]) / dif.dt
+                         + (aft->va.Vz[out[i].x][out[i].y][out[i].z] - bef->va.Vz[out[i].x][out[i].y][out[i].z]) / dif.dt) / 2;
+  }
 }
 //更新
-void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
+__global__ void swapBefAft(BefAft *aft, BefAft *bef, Range ran) {
   int i, j, k;
   int Txximax = ran.sr.Txx.x, Txxjmax = ran.sr.Txx.y, Txxkmax = ran.sr.Txx.z;
   int Tyyimax = ran.sr.Tyy.x, Tyyjmax = ran.sr.Tyy.y, Tyykmax = ran.sr.Tyy.z;

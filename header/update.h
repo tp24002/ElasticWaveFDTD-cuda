@@ -50,5 +50,5 @@ void Vz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
 void Vel(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
 
 
-void Acceleration(Coord_acc *Acc,BefAft *aft, BefAft *bef, Diff dif, Coord out);
-void swapBefAft(BefAft *aft, BefAft *bef, Range ran);
+__global__ void Acceleration(Coord_acc **Acc,BefAft *aft, BefAft *bef, Diff dif, Coord *out,int outnum, int t);
+__global__ void swapBefAft(BefAft *aft, BefAft *bef, Range ran);

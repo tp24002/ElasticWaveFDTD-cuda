@@ -39,5 +39,6 @@ void para_in(Coord *region,Coord *center,Coord *con_st,Coord *con_size,Coord *cl
     initCoord(&out[4],center->x, center->y, center->z - halfcon.z);
     initCoord(&out[5],center->x, center->y, center->z + halfcon.z);
     // int tmax = 32768;
-    *tmax = 16384;
+    // *tmax = 16384;
+    *tmax = 32;
 }
