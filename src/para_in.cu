@@ -7,7 +7,7 @@
 void para_in(Coord *region,Coord *center,Coord *con_st,Coord *con_size,Coord *clack_st,Coord *clack_size,Coord *out,Inpaluse *ip,int *outNum,int *tmax){
     //サイズ
     //可変値
-    initCoord(region, 100, 100, 100);
+    initCoord(region, 10, 10, 10);
     initCoord(con_st, 3, 3, 3);
     initCoord(con_size, 11, 11, 11);
     //2-14で考える
@@ -39,5 +39,6 @@ void para_in(Coord *region,Coord *center,Coord *con_st,Coord *con_size,Coord *cl
     initCoord(&out[4],center->x, center->y, center->z - halfcon.z);
     initCoord(&out[5],center->x, center->y, center->z + halfcon.z);
     // int tmax = 32768;
-    *tmax = 16384;
+    // *tmax = 16384;
+    *tmax = 32;
 }

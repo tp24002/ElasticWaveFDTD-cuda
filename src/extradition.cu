@@ -3,245 +3,303 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <cuda_runtime.h>
 
-#include "../header/init.h"
-#include "../header/insert.h"
 #include "../header/struct.h"
-#include "../header/update.h"
-#include "../header/para_in.h"
 
-void onceHtoD(MedArr *ma_h, MedArr *ma_d, Diff *dif_h, Diff *dif_d, Range *ran_h, Range *ran_d) {
-    int num_elements = ran_h->sr.Txx.x * ran_h->sr.Txx.y * ran_h->sr.Txx.z;
-    cudaMemcpy(&ma_d, &ma_h, sizeof(MedArr), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->ramda, &ma_h->ramda, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->mu, &ma_h->mu, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->c11, &ma_h->c11, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->rho, &ma_h->rho, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetaxx, &ma_h->zetaxx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetaxy, &ma_h->zetaxy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetaxz, &ma_h->zetaxz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetayx, &ma_h->zetayx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetayy, &ma_h->zetayy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetayz, &ma_h->zetayz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetazx, &ma_h->zetazx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetazy, &ma_h->zetazy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetazz, &ma_h->zetazz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->gamma, &ma_h->gamma, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->khi, &ma_h->khi, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->xi11, &ma_h->xi11, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetadx, &ma_h->zetadx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetady, &ma_h->zetady, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ma_d->zetadz, &ma_h->zetadz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
+////// メモリ確保
 
-    cudaMemcpy(&dif_d, &dif_h, sizeof(Diff), cudaMemcpyHostToDevice);
-    cudaMemcpy(&dif_d->dt, &dif_h->dt, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(&dif_d->dx, &dif_h->dx, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(&dif_d->dy, &dif_h->dy, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(&dif_d->dz, &dif_h->dz, sizeof(double), cudaMemcpyHostToDevice);
+// 3d array メモリ確保
+void allocate3DArray(double ****array, int x, int y, int z) {
+    // 1. ホスト側のポインタをデバイス側に転送するためのメモリを確保
+    double ***temp_array;
+    cudaMalloc((void **)&temp_array, x * sizeof(double **));
+    for (int i = 0; i < x; i++) {
+        double **temp_row;
+        cudaMalloc((void **)&temp_row, y * sizeof(double *));
+        for (int j = 0; j < y; j++) {
+            double *temp_col;
+            cudaMalloc((void **)&temp_col, z * sizeof(double));
+            // デバイスメモリにtemp_row[j]を設定
+            cudaMemcpy(&temp_row[j], &temp_col, sizeof(double *), cudaMemcpyHostToDevice);
+        }
+        // デバイスメモリにtemp_array[i]を設定
+        cudaMemcpy(&temp_array[i], &temp_row, sizeof(double **), cudaMemcpyHostToDevice);
+    }
+    // ホスト側のポインタにデバイスのポインタを設定
+    *array = temp_array;
+}
+// メモリ確保 BefAft
+void allocateBefAft(BefAft *d_befAft, Range ran) {
+    // メモリをGPUに割り当て
+    cudaMalloc((void **)&(d_befAft->sa), sizeof(SigArr));
+    cudaMalloc((void **)&(d_befAft->ta), sizeof(TauArr));
+    cudaMalloc((void **)&(d_befAft->va), sizeof(VelArr));
+    
+    // SigArr のメンバのメモリ確保
+    allocate3DArray(&d_befAft->sa.Txx , ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_befAft->sa.Txxx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_befAft->sa.Txxy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_befAft->sa.Txxz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_befAft->sa.Tyy , ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArray(&d_befAft->sa.Tyyx, ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArray(&d_befAft->sa.Tyyy, ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArray(&d_befAft->sa.Tyyz, ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArray(&d_befAft->sa.Tzz , ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
+    allocate3DArray(&d_befAft->sa.Tzzx, ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
+    allocate3DArray(&d_befAft->sa.Tzzy, ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
+    allocate3DArray(&d_befAft->sa.Tzzz, ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
 
-    cudaMemcpy(&ran_d, &ran_h, sizeof(Range), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr, &ran_h->sr, sizeof(SigRan), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr, &ran_h->tr, sizeof(TauRan), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->vr, &ran_h->vr, sizeof(VelRan), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Txx, &ran_h->sr.Txx, sizeof(Coord) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tyy, &ran_h->sr.Tyy, sizeof(Coord) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tzz, &ran_h->sr.Tzz, sizeof(Coord) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Txy, &ran_h->tr.Txy, sizeof(Coord) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tyz, &ran_h->tr.Tyz, sizeof(Coord) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tzx, &ran_h->tr.Tzx, sizeof(Coord) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Txx.x, &ran_h->sr.Txx.x, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Txx.y, &ran_h->sr.Txx.y, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Txx.z, &ran_h->sr.Txx.z, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tyy.x, &ran_h->sr.Tyy.x, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tyy.y, &ran_h->sr.Tyy.y, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tyy.z, &ran_h->sr.Tyy.z, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tzz.x, &ran_h->sr.Tzz.x, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tzz.y, &ran_h->sr.Tzz.y, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->sr.Tzz.z, &ran_h->sr.Tzz.z, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Txy.x, &ran_h->tr.Txy.x, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Txy.y, &ran_h->tr.Txy.y, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Txy.z, &ran_h->tr.Txy.z, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tyz.x, &ran_h->tr.Tyz.x, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tyz.y, &ran_h->tr.Tyz.y, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tyz.z, &ran_h->tr.Tyz.z, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tzx.x, &ran_h->tr.Tzx.x, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tzx.y, &ran_h->tr.Tzx.y, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ran_d->tr.Tzx.z, &ran_h->tr.Tzx.z, sizeof(double) * num_elements, cudaMemcpyHostToDevice);
+    // TauArr のメンバのメモリ確保
+    allocate3DArray(&d_befAft->ta.Txy , ran.tr.Txy.x, ran.tr.Txy.y, ran.tr.Txy.z);
+    allocate3DArray(&d_befAft->ta.Txyx, ran.tr.Txy.x, ran.tr.Txy.y, ran.tr.Txy.z);
+    allocate3DArray(&d_befAft->ta.Txyy, ran.tr.Txy.x, ran.tr.Txy.y, ran.tr.Txy.z);
+    allocate3DArray(&d_befAft->ta.Tyz , ran.tr.Tyz.x, ran.tr.Tyz.y, ran.tr.Tyz.z);
+    allocate3DArray(&d_befAft->ta.Tyzy, ran.tr.Tyz.x, ran.tr.Tyz.y, ran.tr.Tyz.z);
+    allocate3DArray(&d_befAft->ta.Tyzz, ran.tr.Tyz.x, ran.tr.Tyz.y, ran.tr.Tyz.z);
+    allocate3DArray(&d_befAft->ta.Tzx , ran.tr.Tzx.x, ran.tr.Tzx.y, ran.tr.Tzx.z);
+    allocate3DArray(&d_befAft->ta.Tzxz, ran.tr.Tzx.x, ran.tr.Tzx.y, ran.tr.Tzx.z);
+    allocate3DArray(&d_befAft->ta.Tzxx, ran.tr.Tzx.x, ran.tr.Tzx.y, ran.tr.Tzx.z);
+
+    // VelArr のメンバのメモリ確保
+    allocate3DArray(&d_befAft->va.Vx , ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArray(&d_befAft->va.Vxx, ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArray(&d_befAft->va.Vxy, ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArray(&d_befAft->va.Vxz, ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArray(&d_befAft->va.Vy , ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArray(&d_befAft->va.Vyx, ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArray(&d_befAft->va.Vyy, ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArray(&d_befAft->va.Vyz, ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArray(&d_befAft->va.Vz , ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArray(&d_befAft->va.Vzx, ran.vr.Vz.x, ran.vr.Vz.y, ran.vr.Vz.z);
+    allocate3DArray(&d_befAft->va.Vzy, ran.vr.Vz.x, ran.vr.Vz.y, ran.vr.Vz.z);
+    allocate3DArray(&d_befAft->va.Vzz, ran.vr.Vz.x, ran.vr.Vz.y, ran.vr.Vz.z);
 }
 
-void loopHtoD(Inpaluse *ip_h, Inpaluse *ip_d, BefAft *aft_h, BefAft *aft_d, BefAft *bef_h, BefAft *bef_d, Range ran) {
-    int num_elements = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
-    cudaMemcpy(ip_d, &ip_h, sizeof(Inpaluse), cudaMemcpyHostToDevice);
-    cudaMemcpy(ip_d->Txx, &ip_h->Txx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(ip_d->Tyy, &ip_h->Tyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(ip_d->Tzz, &ip_h->Tzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&ip_d->freq, &ip_h->freq, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ip_d->mode, &ip_h->mode, sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ip_d->in, &ip_h->in, sizeof(Coord), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ip_d->in.x, &ip_h->in.x, sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ip_d->in.y, &ip_h->in.y, sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(&ip_d->in.z, &ip_h->in.z, sizeof(int), cudaMemcpyHostToDevice);
+// メモリ確保 MedArr
+void allocateMedArr(MedArr *d_medArr, Range ran) {
+    // 各メンバ変数のメモリをGPUに割り当て
+    allocate3DArray(&d_medArr->ramda, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->mu, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->c11, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->rho, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
 
-    cudaMemcpy(&aft_d, &aft_h, sizeof(BefAft), cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->sa, &aft_h->sa, sizeof(SigArr), cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta, &aft_h->ta, sizeof(TauArr), cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va, &aft_h->va, sizeof(VelArr), cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Txx, aft_h->sa.Txx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Txxx, aft_h->sa.Txxx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Txxy, aft_h->sa.Txxy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Txxz, aft_h->sa.Txxz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tyy, aft_h->sa.Tyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tyyx, aft_h->sa.Tyyx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tyyy, aft_h->sa.Tyyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tyyz, aft_h->sa.Tyyz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tzz, aft_h->sa.Tzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tzzx, aft_h->sa.Tzzx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tzzy, aft_h->sa.Tzzy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(aft_d->sa.Tzzz, aft_h->sa.Tzzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    
-    cudaMemcpy(&aft_d->ta.Txy, &aft_h->ta.Txy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Txyx, &aft_h->ta.Txyx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Txyy, &aft_h->ta.Txyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Tyz, &aft_h->ta.Tyz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Tyzy, &aft_h->ta.Tyzy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Tyzz, &aft_h->ta.Tyzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Tzx, &aft_h->ta.Tzx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Tzxz, &aft_h->ta.Tzxz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->ta.Tzxx, &aft_h->ta.Tzxx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
+    // ゼータ（zetaxx, zetaxy, など）のメモリをGPUに割り当て
+    allocate3DArray(&d_medArr->zetaxx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetaxy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetaxz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetayx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetayy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetayz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetazx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetazy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetazz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
 
-    cudaMemcpy(&aft_d->va.Vx, &aft_h->va.Vx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vxx, &aft_h->va.Vxx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vxy, &aft_h->va.Vxy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vxz, &aft_h->va.Vxz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vy, &aft_h->va.Vy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vyx, &aft_h->va.Vyx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vyy, &aft_h->va.Vyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vyz, &aft_h->va.Vyz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vz, &aft_h->va.Vz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vzx, &aft_h->va.Vzx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vzy, &aft_h->va.Vzy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&aft_d->va.Vzz, &aft_h->va.Vzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-
-    cudaMemcpy(&bef_d, &bef_h, sizeof(BefAft), cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->sa, &bef_h->sa, sizeof(SigArr), cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta, &bef_h->ta, sizeof(TauArr), cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va, &bef_h->va, sizeof(VelArr), cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Txx, bef_h->sa.Txx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Txxx, bef_h->sa.Txxx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Txxy, bef_h->sa.Txxy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Txxz, bef_h->sa.Txxz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tyy, bef_h->sa.Tyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tyyx, bef_h->sa.Tyyx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tyyy, bef_h->sa.Tyyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tyyz, bef_h->sa.Tyyz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tzz, bef_h->sa.Tzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tzzx, bef_h->sa.Tzzx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tzzy, bef_h->sa.Tzzy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(bef_d->sa.Tzzz, bef_h->sa.Tzzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    
-    cudaMemcpy(&bef_d->ta.Txy, &bef_h->ta.Txy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Txyx, &bef_h->ta.Txyx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Txyy, &bef_h->ta.Txyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Tyz, &bef_h->ta.Tyz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Tyzy, &bef_h->ta.Tyzy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Tyzz, &bef_h->ta.Tyzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Tzx, &bef_h->ta.Tzx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Tzxz, &bef_h->ta.Tzxz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->ta.Tzxx, &bef_h->ta.Tzxx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-
-    cudaMemcpy(&bef_d->va.Vx, &bef_h->va.Vx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vxx, &bef_h->va.Vxx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vxy, &bef_h->va.Vxy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vxz, &bef_h->va.Vxz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vy, &bef_h->va.Vy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vyx, &bef_h->va.Vyx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vyy, &bef_h->va.Vyy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vyz, &bef_h->va.Vyz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vz, &bef_h->va.Vz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vzx, &bef_h->va.Vzx, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vzy, &bef_h->va.Vzy, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
-    cudaMemcpy(&bef_d->va.Vzz, &bef_h->va.Vzz, sizeof(double ***) * num_elements, cudaMemcpyHostToDevice);
+    // その他のメンバ変数のメモリをGPUに割り当て
+    allocate3DArray(&d_medArr->gamma, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->khi, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->xi11, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetadx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetady, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_medArr->zetadz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
 }
 
-void loopDtoH(BefAft *aft_h, BefAft *aft_d, BefAft *bef_h, BefAft *bef_d, Range ran) {
-    int num_elements = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
-    cudaMemcpy(&aft_h, &aft_d, sizeof(BefAft), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->sa, &aft_d->sa, sizeof(SigArr), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta, &aft_d->ta, sizeof(TauArr), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va, &aft_d->va, sizeof(VelArr), cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Txx, aft_d->sa.Txx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Txxx, aft_d->sa.Txxx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Txxy, aft_d->sa.Txxy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Txxz, aft_d->sa.Txxz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tyy, aft_d->sa.Tyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tyyx, aft_d->sa.Tyyx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tyyy, aft_d->sa.Tyyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tyyz, aft_d->sa.Tyyz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tzz, aft_d->sa.Tzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tzzx, aft_d->sa.Tzzx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tzzy, aft_d->sa.Tzzy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(aft_h->sa.Tzzz, aft_d->sa.Tzzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    
-    cudaMemcpy(&aft_h->ta.Txy, &aft_d->ta.Txy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Txyx, &aft_d->ta.Txyx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Txyy, &aft_d->ta.Txyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Tyz, &aft_d->ta.Tyz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Tyzy, &aft_d->ta.Tyzy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Tyzz, &aft_d->ta.Tyzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Tzx, &aft_d->ta.Tzx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Tzxz, &aft_d->ta.Tzxz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->ta.Tzxx, &aft_d->ta.Tzxx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
+// メモリ確保 Inpaluse
+void allocateInpaluse(Inpaluse *d_inpaluse, Range ran) {
+    cudaMalloc((void **)&(d_inpaluse->in), sizeof(Coord));
 
-    cudaMemcpy(&aft_h->va.Vx, &aft_d->va.Vx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vxx, &aft_d->va.Vxx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vxy, &aft_d->va.Vxy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vxz, &aft_d->va.Vxz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vy, &aft_d->va.Vy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vyx, &aft_d->va.Vyx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vyy, &aft_d->va.Vyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vyz, &aft_d->va.Vyz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vz, &aft_d->va.Vz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vzx, &aft_d->va.Vzx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vzy, &aft_d->va.Vzy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&aft_h->va.Vzz, &aft_d->va.Vzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
+    allocate3DArray(&d_inpaluse->Txx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_inpaluse->Tyy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArray(&d_inpaluse->Tzz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+}
 
-    cudaMemcpy(&bef_h, &bef_d, sizeof(BefAft), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->sa, &bef_d->sa, sizeof(SigArr), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta, &bef_d->ta, sizeof(TauArr), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va, &bef_d->va, sizeof(VelArr), cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Txx, bef_d->sa.Txx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Txxx, bef_d->sa.Txxx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Txxy, bef_d->sa.Txxy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Txxz, bef_d->sa.Txxz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tyy, bef_d->sa.Tyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tyyx, bef_d->sa.Tyyx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tyyy, bef_d->sa.Tyyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tyyz, bef_d->sa.Tyyz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tzz, bef_d->sa.Tzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tzzx, bef_d->sa.Tzzx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tzzy, bef_d->sa.Tzzy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(bef_h->sa.Tzzz, bef_d->sa.Tzzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    
-    cudaMemcpy(&bef_h->ta.Txy, &bef_d->ta.Txy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Txyx, &bef_d->ta.Txyx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Txyy, &bef_d->ta.Txyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Tyz, &bef_d->ta.Tyz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Tyzy, &bef_d->ta.Tyzy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Tyzz, &bef_d->ta.Tyzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Tzx, &bef_d->ta.Tzx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Tzxz, &bef_d->ta.Tzxz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->ta.Tzxx, &bef_d->ta.Tzxx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
 
-    cudaMemcpy(&bef_h->va.Vx, &bef_d->va.Vx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vxx, &bef_d->va.Vxx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vxy, &bef_d->va.Vxy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vxz, &bef_d->va.Vxz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vy, &bef_d->va.Vy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vyx, &bef_d->va.Vyx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vyy, &bef_d->va.Vyy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vyz, &bef_d->va.Vyz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vz, &bef_d->va.Vz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vzx, &bef_d->va.Vzx, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vzy, &bef_d->va.Vzy, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&bef_h->va.Vzz, &bef_d->va.Vzz, sizeof(double ***) * num_elements, cudaMemcpyDeviceToHost);
+////// データ転送 ホスト->デバイス
+
+// 3d array ホスト->デバイス
+void copy3DArrayToDevice(double ***d_array, double ***h_array, int x, int y, int z) {
+    // 1. ホスト側の配列をデバイス側にコピーするための準備
+    double **d_row;
+    double *d_col;
+
+    // 2. 各次元ごとにデータをコピー
+    for (int i = 0; i < x; i++) {
+        // デバイス側の2次元ポインタを取得
+        cudaMemcpy(&d_row, &d_array[i], sizeof(double **), cudaMemcpyDeviceToHost);
+
+        for (int j = 0; j < y; j++) {
+            // デバイス側の1次元ポインタを取得
+            cudaMemcpy(&d_col, &d_row[j], sizeof(double *), cudaMemcpyDeviceToHost);
+
+            // ホストからデバイスへデータコピー
+            cudaMemcpy(d_col, h_array[i][j], z * sizeof(double), cudaMemcpyHostToDevice);
+        }
+    }
+}
+// ホスト->デバイス BefAft
+void copyBefAftToDevice(BefAft *d_befAft, BefAft *h_befAft, Range ran) {
+    int Txxi = ran.sr.Txx.x, Txxj = ran.sr.Txx.y, Txxk = ran.sr.Txx.z;
+    int Tyyi = ran.sr.Tyy.x, Tyyj = ran.sr.Tyy.y, Tyyk = ran.sr.Tyy.z;
+    int Tzzi = ran.sr.Tzz.x, Tzzj = ran.sr.Tzz.y, Tzzk = ran.sr.Tzz.z;
+    int Txyi = ran.tr.Txy.x, Txyj = ran.tr.Txy.y, Txyk = ran.tr.Txy.z;
+    int Tyzi = ran.tr.Tyz.x, Tyzj = ran.tr.Tyz.y, Tyzk = ran.tr.Tyz.z;
+    int Tzxi = ran.tr.Tzx.x, Tzxj = ran.tr.Tzx.y, Tzxk = ran.tr.Tzx.z;
+    int Vxi  = ran.vr.Vx.x , Vxj  = ran.vr.Vx.y , Vxk  = ran.vr.Vx.z;
+    int Vyi  = ran.vr.Vy.x , Vyj  = ran.vr.Vy.y , Vyk  = ran.vr.Vy.z;
+    int Vzi  = ran.vr.Vz.x , Vzj  = ran.vr.Vz.y , Vzk  = ran.vr.Vz.z;
+    // SigArr のメンバのデータコピー
+    copy3DArrayToDevice(d_befAft->sa.Txx,  h_befAft->sa.Txx , Txxi, Txxj, Txxk);
+    copy3DArrayToDevice(d_befAft->sa.Txxx, h_befAft->sa.Txxx, Txxi, Txxj, Txxk);
+    copy3DArrayToDevice(d_befAft->sa.Txxy, h_befAft->sa.Txxy, Txxi, Txxj, Txxk);
+    copy3DArrayToDevice(d_befAft->sa.Txxz, h_befAft->sa.Txxz, Txxi, Txxj, Txxk);
+    copy3DArrayToDevice(d_befAft->sa.Tyy, h_befAft->sa.Tyy , Tyyi, Tyyj, Tyyk);
+    copy3DArrayToDevice(d_befAft->sa.Tyyx, h_befAft->sa.Tyyx, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToDevice(d_befAft->sa.Tyyy, h_befAft->sa.Tyyy, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToDevice(d_befAft->sa.Tyyz, h_befAft->sa.Tyyz, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToDevice(d_befAft->sa.Tzz, h_befAft->sa.Tzz , Tzzi, Tzzj, Tzzk);
+    copy3DArrayToDevice(d_befAft->sa.Tzzx, h_befAft->sa.Tzzx, Tzzi, Tzzj, Tzzk);
+    copy3DArrayToDevice(d_befAft->sa.Tzzy, h_befAft->sa.Tzzy, Tzzi, Tzzj, Tzzk);
+    copy3DArrayToDevice(d_befAft->sa.Tzzz, h_befAft->sa.Tzzz, Tzzi, Tzzj, Tzzk);
+    // TauArr のメンバのデータコピー
+    copy3DArrayToDevice(d_befAft->ta.Txy, h_befAft->ta.Txy , Txyi, Txyj, Txyk);
+    copy3DArrayToDevice(d_befAft->ta.Txyx, h_befAft->ta.Txyx, Txyi, Txyj, Txyk);
+    copy3DArrayToDevice(d_befAft->ta.Txyy, h_befAft->ta.Txyy, Txyi, Txyj, Txyk);
+    copy3DArrayToDevice(d_befAft->ta.Tyz, h_befAft->ta.Tyz , Tyzi, Tyzj, Tyzk);
+    copy3DArrayToDevice(d_befAft->ta.Tyzy, h_befAft->ta.Tyzy, Tyzi, Tyzj, Tyzk);
+    copy3DArrayToDevice(d_befAft->ta.Tyzz, h_befAft->ta.Tyzz, Tyzi, Tyzj, Tyzk);
+    copy3DArrayToDevice(d_befAft->ta.Tzx, h_befAft->ta.Tzx , Tzxi, Tzxj, Tzxk);
+    copy3DArrayToDevice(d_befAft->ta.Tzxz, h_befAft->ta.Tzxz, Tzxi, Tzxj, Tzxk);
+    copy3DArrayToDevice(d_befAft->ta.Tzxx, h_befAft->ta.Tzxx, Tzxi, Tzxj, Tzxk);
+
+    // VelArr のメンバのデータコピー
+    copy3DArrayToDevice(d_befAft->va.Vx, h_befAft->va.Vx , Vxi, Vxj, Vxk);
+    copy3DArrayToDevice(d_befAft->va.Vxx, h_befAft->va.Vxx, Vxi, Vxj, Vxk);
+    copy3DArrayToDevice(d_befAft->va.Vxy, h_befAft->va.Vxy, Vxi, Vxj, Vxk);
+    copy3DArrayToDevice(d_befAft->va.Vxz, h_befAft->va.Vxz, Vxi, Vxj, Vxk);
+    copy3DArrayToDevice(d_befAft->va.Vy, h_befAft->va.Vy , Vyi, Vyj, Vyk);
+    copy3DArrayToDevice(d_befAft->va.Vyx, h_befAft->va.Vyx, Vyi, Vyj, Vyk);
+    copy3DArrayToDevice(d_befAft->va.Vyy, h_befAft->va.Vyy, Vyi, Vyj, Vyk);
+    copy3DArrayToDevice(d_befAft->va.Vyz, h_befAft->va.Vyz, Vyi, Vyj, Vyk);
+    copy3DArrayToDevice(d_befAft->va.Vz, h_befAft->va.Vz , Vzi, Vzj, Vzk);
+    copy3DArrayToDevice(d_befAft->va.Vzx, h_befAft->va.Vzx, Vzi, Vzj, Vzk);
+    copy3DArrayToDevice(d_befAft->va.Vzy, h_befAft->va.Vzy, Vzi, Vzj, Vzk);
+    copy3DArrayToDevice(d_befAft->va.Vzz, h_befAft->va.Vzz, Vzi, Vzj, Vzk);
+}
+// ホスト->デバイス Inpaluse
+void copyInpaluseToDevice(Inpaluse *d_inpaluse, Inpaluse *h_inpaluse, Range ran) {
+    int Txxi = ran.sr.Txx.x, Txxj = ran.sr.Txx.y, Txxk = ran.sr.Txx.z;
+    int Tyyi = ran.sr.Tyy.x, Tyyj = ran.sr.Tyy.y, Tyyk = ran.sr.Tyy.z;
+    int Tzzi = ran.sr.Tzz.x, Tzzj = ran.sr.Tzz.y, Tzzk = ran.sr.Tzz.z;
+
+    // 3D配列データの転送 (Txx, Tyy, Tzz)
+    copy3DArrayToDevice(d_inpaluse->Txx, h_inpaluse->Txx, Txxi, Txxj, Txxk);
+    copy3DArrayToDevice(d_inpaluse->Tyy, h_inpaluse->Tyy, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToDevice(d_inpaluse->Tzz, h_inpaluse->Tzz, Tzzi, Tzzj, Tzzk);
+
+    cudaMemcpy(&(d_inpaluse->freq), &(h_inpaluse->freq), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_inpaluse->mode), &(h_inpaluse->mode), sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_inpaluse->in), &(h_inpaluse->in), sizeof(Coord), cudaMemcpyHostToDevice);
+}
+// ホスト->デバイス MedArr
+void copyMedArrToDevice(MedArr *d_medArr, MedArr *h_medArr, Range ran) {
+    int xi = ran.sr.Txx.x, xj = ran.sr.Txx.y, xk = ran.sr.Txx.z;
+
+    copy3DArrayToDevice(d_medArr->ramda, h_medArr->ramda, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->mu, h_medArr->mu, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->c11, h_medArr->c11, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->rho, h_medArr->rho, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetaxx, h_medArr->zetaxx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetaxy, h_medArr->zetaxy, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetaxz, h_medArr->zetaxz, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetayx, h_medArr->zetayx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetayy, h_medArr->zetayy, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetayz, h_medArr->zetayz, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetazx, h_medArr->zetazx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetazy, h_medArr->zetazy, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetazz, h_medArr->zetazz, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->gamma, h_medArr->gamma, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->khi, h_medArr->khi, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->xi11, h_medArr->xi11, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetadx, h_medArr->zetadx, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetady, h_medArr->zetady, xi, xj, xk);
+    copy3DArrayToDevice(d_medArr->zetadz, h_medArr->zetadz, xi, xj, xk);
+}
+// ホスト->デバイス Diff
+void copyDiffToDevice(Diff *d_diff, Diff *h_diff) {
+    cudaMemcpy(&(d_diff->dx), &(h_diff->dx), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_diff->dy), &(h_diff->dy), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_diff->dz), &(h_diff->dz), sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(&(d_diff->dt), &(h_diff->dt), sizeof(double), cudaMemcpyHostToDevice);
+}
+
+////// データ転送 デバイス->ホスト
+
+// 3d array デバイス->ホスト
+void copy3DArrayToHost(double ***h_array, double ***d_array, int x, int y, int z) {
+    // 1. ホスト側の配列を受け取る準備
+    double **d_row;
+    double *d_col;
+
+    // 2. 各次元ごとにデータをコピー
+    for (int i = 0; i < x; i++) {
+        // デバイス側の2次元ポインタを取得
+        cudaMemcpy(&d_row, &d_array[i], sizeof(double **), cudaMemcpyDeviceToHost);
+
+        for (int j = 0; j < y; j++) {
+            // デバイス側の1次元ポインタを取得
+            cudaMemcpy(&d_col, &d_row[j], sizeof(double *), cudaMemcpyDeviceToHost);
+
+            // デバイスからホストへデータコピー
+            cudaMemcpy(h_array[i][j], d_col, z * sizeof(double), cudaMemcpyDeviceToHost);
+        }
+    }
+}
+// デバイス->ホスト BefAft
+void copyBefAftToHost(BefAft *h_befAft, BefAft *d_befAft, Range ran) {
+    int Txxi = ran.sr.Txx.x, Txxj = ran.sr.Txx.y, Txxk = ran.sr.Txx.z;
+    int Tyyi = ran.sr.Tyy.x, Tyyj = ran.sr.Tyy.y, Tyyk = ran.sr.Tyy.z;
+    int Tzzi = ran.sr.Tzz.x, Tzzj = ran.sr.Tzz.y, Tzzk = ran.sr.Tzz.z;
+    int Txyi = ran.tr.Txy.x, Txyj = ran.tr.Txy.y, Txyk = ran.tr.Txy.z;
+    int Tyzi = ran.tr.Tyz.x, Tyzj = ran.tr.Tyz.y, Tyzk = ran.tr.Tyz.z;
+    int Tzxi = ran.tr.Tzx.x, Tzxj = ran.tr.Tzx.y, Tzxk = ran.tr.Tzx.z;
+    int Vxi  = ran.vr.Vx.x , Vxj  = ran.vr.Vx.y , Vxk  = ran.vr.Vx.z;
+    int Vyi  = ran.vr.Vy.x , Vyj  = ran.vr.Vy.y , Vyk  = ran.vr.Vy.z;
+    int Vzi  = ran.vr.Vz.x , Vzj  = ran.vr.Vz.y , Vzk  = ran.vr.Vz.z;
+    // SigArr のメンバのデータコピー
+    copy3DArrayToHost(h_befAft->sa.Txx,  d_befAft->sa.Txx , Txxi, Txxj, Txxk);
+    copy3DArrayToHost(h_befAft->sa.Txxx, d_befAft->sa.Txxx, Txxi, Txxj, Txxk);
+    copy3DArrayToHost(h_befAft->sa.Txxy, d_befAft->sa.Txxy, Txxi, Txxj, Txxk);
+    copy3DArrayToHost(h_befAft->sa.Txxz, d_befAft->sa.Txxz, Txxi, Txxj, Txxk);
+    copy3DArrayToHost(h_befAft->sa.Tyy, d_befAft->sa.Tyy , Tyyi, Tyyj, Tyyk);
+    copy3DArrayToHost(h_befAft->sa.Tyyx, d_befAft->sa.Tyyx, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToHost(h_befAft->sa.Tyyy, d_befAft->sa.Tyyy, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToHost(h_befAft->sa.Tyyz, d_befAft->sa.Tyyz, Tyyi, Tyyj, Tyyk);
+    copy3DArrayToHost(h_befAft->sa.Tzz, d_befAft->sa.Tzz , Tzzi, Tzzj, Tzzk);
+    copy3DArrayToHost(h_befAft->sa.Tzzx, d_befAft->sa.Tzzx, Tzzi, Tzzj, Tzzk);
+    copy3DArrayToHost(h_befAft->sa.Tzzy, d_befAft->sa.Tzzy, Tzzi, Tzzj, Tzzk);
+    copy3DArrayToHost(h_befAft->sa.Tzzz, d_befAft->sa.Tzzz, Tzzi, Tzzj, Tzzk);
+    // TauArr のメンバのデータコピー
+    copy3DArrayToHost(h_befAft->ta.Txy, d_befAft->ta.Txy , Txyi, Txyj, Txyk);
+    copy3DArrayToHost(h_befAft->ta.Txyx, d_befAft->ta.Txyx, Txyi, Txyj, Txyk);
+    copy3DArrayToHost(h_befAft->ta.Txyy, d_befAft->ta.Txyy, Txyi, Txyj, Txyk);
+    copy3DArrayToHost(h_befAft->ta.Tyz, d_befAft->ta.Tyz , Tyzi, Tyzj, Tyzk);
+    copy3DArrayToHost(h_befAft->ta.Tyzy, d_befAft->ta.Tyzy, Tyzi, Tyzj, Tyzk);
+    copy3DArrayToHost(h_befAft->ta.Tyzz, d_befAft->ta.Tyzz, Tyzi, Tyzj, Tyzk);
+    copy3DArrayToHost(h_befAft->ta.Tzx, d_befAft->ta.Tzx , Tzxi, Tzxj, Tzxk);
+    copy3DArrayToHost(h_befAft->ta.Tzxz, d_befAft->ta.Tzxz, Tzxi, Tzxj, Tzxk);
+    copy3DArrayToHost(h_befAft->ta.Tzxx, d_befAft->ta.Tzxx, Tzxi, Tzxj, Tzxk);
+
+    // VelArr のメンバのデータコピー
+    copy3DArrayToHost(h_befAft->va.Vx, d_befAft->va.Vx , Vxi, Vxj, Vxk);
+    copy3DArrayToHost(h_befAft->va.Vxx, d_befAft->va.Vxx, Vxi, Vxj, Vxk);
+    copy3DArrayToHost(h_befAft->va.Vxy, d_befAft->va.Vxy, Vxi, Vxj, Vxk);
+    copy3DArrayToHost(h_befAft->va.Vxz, d_befAft->va.Vxz, Vxi, Vxj, Vxk);
+    copy3DArrayToHost(h_befAft->va.Vy, d_befAft->va.Vy , Vyi, Vyj, Vyk);
+    copy3DArrayToHost(h_befAft->va.Vyx, d_befAft->va.Vyx, Vyi, Vyj, Vyk);
+    copy3DArrayToHost(h_befAft->va.Vyy, d_befAft->va.Vyy, Vyi, Vyj, Vyk);
+    copy3DArrayToHost(h_befAft->va.Vyz, d_befAft->va.Vyz, Vyi, Vyj, Vyk);
+    copy3DArrayToHost(h_befAft->va.Vz, d_befAft->va.Vz , Vzi, Vzj, Vzk);
+    copy3DArrayToHost(h_befAft->va.Vzx, d_befAft->va.Vzx, Vzi, Vzj, Vzk);
+    copy3DArrayToHost(h_befAft->va.Vzy, d_befAft->va.Vzy, Vzi, Vzj, Vzk);
+    copy3DArrayToHost(h_befAft->va.Vzz, d_befAft->va.Vzz, Vzi, Vzj, Vzk);
 }

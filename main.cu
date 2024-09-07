@@ -18,21 +18,20 @@ int main(void) {
   Medium med[E_M_END];
   Object con;
   Object *clack;
-  Range ran_host;
-  Range ran_device;
+  Range ran;
   Pml pml;
-  Diff dif_host;
-  Diff dif_device;
-  MedArr ma_host;
-  MedArr ma_device;
-  //hosu data(cpu)
-  BefAft bef_host;
-  BefAft aft_host;
+  //host data(cpu)
+  Diff dif_h;
+  MedArr ma_h;
+  BefAft bef_h;
+  BefAft aft_h;
+  Inpaluse ip_h;
   //device data(gpu)
-  BefAft bef_device;
-  BefAft aft_device;
-  Inpaluse ip_host;
-  Inpaluse ip_device;
+  Diff dif_d;
+  MedArr ma_d;
+  BefAft bef_d;
+  BefAft aft_d;
+  Inpaluse ip_d;
   // Coord out1,out2,out3,out4;
   FILE *fp1;
   // FILE *fp1,*fp2,*fp3,*fp4;
@@ -55,64 +54,84 @@ int main(void) {
   // int max_ClackPatern; // 欠陥を配置できる最大のパターン数
   int clack_count; // 割合による欠陥数
   Coord threads;
-  initCoord(&threads, 128, 128, 128);
-  para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip_host,&outNum,&tmax);
-  //入力地点出力
-  printf("in:%d,%d,%d\n", ip_host.in.x, ip_host.in.y, ip_host.in.z);
-  printf("center:%d,%d,%d\n",center.x,center.y,center.z);
+  Coord_acc **Acc_h, **Acc_d;
+  // スレッド数
+  initCoord(&threads, 4, 4, 8);
+  // 外部入力
+  para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip_h,&outNum,&tmax);
+  printf("region:(%d,%d,%d)\n", region.x, region.y, region.z);
+  // 加速度メモリ確保
+  Acc_h = (Coord_acc **)malloc(sizeof(Coord_acc *) * outNum);
+  for (int i = 0; i < outNum; i++) {
+      Acc_h[i] = (Coord_acc *)malloc(tmax * sizeof(Coord_acc));
+  }
+  cudaMalloc((void **)&Acc_d, outNum * sizeof(Coord_acc *));
+  for (int i = 0; i < outNum; i++) {
+    cudaMalloc((void **)&Acc_h[i], tmax * sizeof(Coord_acc));
+  }
+  // 媒質パターン設定
   initMedium(med);
   printf("med[E_CON].gamma = %le\n", med[E_CON].gamma);
   printf("med[E_CON].khi = %le\n", med[E_CON].khi);
-  initDiff(&dif_host, med);
-  printf("dif_host.dt = %le\n", dif_host.dt);
-  initPml(&pml, med, dif_host);//pml 32*2
+  // 差分間隔設定(initで直入力しているためinsertなし)
+  initDiff(&dif_h, med);
+  printf("dif.dt = %le\n", dif_h.dt);
+  // pml層設定
+  initPml(&pml, med, dif_h);
   printf("pml.fm = %le\n", pml.fm);
+  // コンクリート配置
   initConcrete(&con, med[E_CON], pml, con_st.x, con_st.y, con_st.z, con_size.x, con_size.y, con_size.z);//x:+5,-5 y:+3,-3 z:+2,-0
-  //コンクリ部分出力
+  // コンクリ部分出力
   printf("start:%d,%d,%d\n",con.sp.x,con.sp.y,con.sp.z);
   printf("size:%d,%d,%d\n",con.range.x,con.range.y,con.range.z);
-  initRange(&ran_host, region.x, region.y, region.z, pml);//PMLOK
-  initRange(&ran_device, region.x, region.y, region.z, pml);//PMLOK
+  // 計算領域設定
+  initRange(&ran, region.x, region.y, region.z, pml);
+  initRange(&ran, region.x, region.y, region.z, pml);
   // hostメモリ確保
-  initHostBefAft(&bef_host, ran_host);
-  initHostBefAft(&aft_host, ran_host);
+  // bef = (BefAft *)malloc(sizeof(BefAft));
+  initHostBefAft(&bef_h, ran);
+  initHostBefAft(&aft_h, ran);
 
-  // deviceメモリ確保
-  initDeviceBefAft(&bef_device, ran_device);
-  initDeviceBefAft(&aft_device, ran_device);
-
-  initHostMedArr(&ma_host, ran_host.sr);
-  initDeviceMedArr(&ma_device, ran_host.sr);
-
-  initHostInpalse(&ip_host, ran_host.sr, pml, ip_host.mode, ip_host.in.x, ip_host.in.y, ip_host.in.z, ip_host.freq);//
-  initDeviceInpalse(&ip_device, ran_device.sr, pml, ip_device.mode, ip_device.in.x, ip_device.in.y, ip_device.in.z, ip_device.freq);//
-  printf("in:%d,%d,%d\n", ip_host.in.x, ip_host.in.y, ip_host.in.z);
+  // 媒質メモリ確保
+  initHostMedArr(&ma_h, ran.sr);
+  // 入力情報メモリ確保
+  initHostInpalse(&ip_h, ran.sr, pml, ip_h.mode, ip_h.in.x, ip_h.in.y, ip_h.in.z, ip_h.freq);//
+  // 入力情報出力(複数地点になったら要変更)
+  printf("in:%d,%d,%d\n", ip_h.in.x, ip_h.in.y, ip_h.in.z);
+  if(ip_h.mode == E_SINE){
+    printf("sin:%f\n", ip_h.freq);
+  } else if(ip_h.mode == E_RCOS){
+    printf("cos:%f\n", ip_h.freq);
+  }
+  // 計測地点出力
   for(int outnum = 0; outnum < outNum; outnum++){
     printf("out:%d,%d,%d\n",out[outnum].x,out[outnum].y,out[outnum].z);
   }
-  if(ip_host.mode == E_SINE){
-    printf("sin:%f\n", ip_host.freq);
-  } else if(ip_host.mode == E_RCOS){
-    printf("cos:%f\n", ip_host.freq);
-  }
 
-  insertAir(&ma_host, ran_host.sr, med[E_AIR]);
-  insertConcrete(&ma_host, con);//maに格納
+  insertAir(&ma_h, ran.sr, med[E_AIR]);
+  printf("airok\n");
+  insertConcrete(&ma_h, con);//maに格納
+  printf("conok\n");
+
   ratio = 10;
   max_Patern = con_size.x * con_size.y * con_size.z;
   // max_ClackPatern = (con_size.x - 2) * (con_size.y - 2) * (con_size.z - 2);
   clack_count = max_Patern * ratio / 100;
   if(ratio != 0){
     clack = (Object *)malloc(sizeof(Object) * clack_count);
+    printf("clackhalfok\n");
     initClack(clack,med[E_AIR], &pml, clack_st.x, clack_st.y, clack_st.z, clack_size.x, clack_size.y, clack_size.z);
+    
+
     printf("ratio:%d\n", ratio);
-    insertClack(&ma_host, clack, ratio);
+    insertClack(&ma_h, clack, ratio);
   }
-
-  insertPml(&ma_host, ran_host.sr, pml);
-  zeroPadding(&bef_host, ran_host);
-  zeroPadding(&aft_host, ran_host);
-
+  printf("inclackok\n");
+  insertPml(&ma_h, ran.sr, pml);
+  printf("pmlok\n");
+  zeroPadding(&bef_h, ran);
+  zeroPadding(&aft_h, ran);
+  printf("paddingok\n");
   if(ratio != 0){
     // model_count++;
     sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
@@ -121,8 +140,6 @@ int main(void) {
     // for(int i = 0; i < clack_count; i++){
     //   fprintf(fp1, "%d,%d,%d,", clack[i].sp.x, clack[i].sp.y, clack[i].sp.z, clack[i].range.x,clack[i].range.y, clack[i].range.z);
     // }
-  } else {
-    sprintf(fn1, "./%d_%d_%d_cos/first_con.csv",tmax, region.x, con_size.x);
   }
   // fclose(fp1);
 
@@ -131,32 +148,48 @@ int main(void) {
   printf("%.*s\n", (int) sizeof fn1, fn1);
   // fp1 = fopen(fn1, "wb");
 
-  Coord_acc A[256];
-  // int count,counter;
-  
+  // device構造体本体のメモリ確保
+  cudaMalloc((void **)&aft_d, sizeof(BefAft));
+  cudaMalloc((void **)&bef_d, sizeof(BefAft));
+  cudaMalloc((void **)&ma_d, sizeof(MedArr));
+  cudaMalloc((void **)&dif_d, sizeof(Diff));
+  cudaMalloc((void **)&ip_d, sizeof(Inpaluse));
+  // device構造体中身(メンバ)のメモリ確保関数
+  printf("aloocate no\n");
+  allocateBefAft(&aft_d, ran);
+  allocateBefAft(&bef_d, ran);
+  printf("aloocate BefAft ok\n");
+  allocateMedArr(&ma_d, ran);
+  printf("aloocate MedArr ok\n");
+  allocateInpaluse(&ip_d, ran);
+  printf("aloocate Inpaluse ok\n");
 
-  // 変数引き渡しcpu->gpu
-  // cudaMemcpy(&ma_host, &ma_device, sizeof(MedArr), cudaMemcpyHostToDevice);
-  // cudaMemcpy(&dif_host, &dif_device, sizeof(Diff), cudaMemcpyHostToDevice);
-  // cudaMemcpy(&ran_host, &ran_device, sizeof(Range), cudaMemcpyHostToDevice);
-  onceHtoD(&ma_host, &ma_device, &dif_host, &dif_device, &ran_host, &ran_device);
   for (int t = 0; t < tmax; t++) {
-    insertInpulse(&ip_host, dif_host, t);
-    loopHtoD(&ip_host, &ip_device, &aft_host, &aft_device, &bef_host, &bef_device, ran_host);
-    Vel(&aft_device, &bef_device, ma_device, dif_device, ran_device.vr, threads);
-    Sig(&aft_device, &bef_device, ma_device, dif_device, ran_device.sr, ip_device, t, threads);
-    Tau(&aft_device, &bef_device, ma_device, dif_device, ran_device.tr, threads);
-    loopDtoH(&aft_host, &aft_device, &bef_host, &bef_device, ran_host);
+    insertInpulse(&ip_h, dif_h, t);
+    copyInpaluseToDevice(&ip_d, &ip_h, ran);
+
+    Vel(&aft_h, &bef_h, &aft_d, &bef_d, ma_h, &ma_d, dif_h, &dif_d, ran, threads);
+    // printf("okVel\n");
+
+    Sig(&aft_h, &bef_h, &aft_d, &bef_d, ma_h, &ma_d, dif_h, &dif_d, ran, ip_h, &ip_d, t, threads);
+    // printf("okSig\n");
+    Tau(&aft_h, &bef_h, &aft_d, &bef_d, ma_h, &ma_d, dif_h, &dif_d, ran, threads);
+    // printf("okTau\n");
 
     // 加速度算出＆書き込み
-    for(int i = 0; i < outNum; i++){
-      Acc(&A[i],&aft_host, &bef_host, dif_host, out[i]);
-      fprintf(fp1, "%le,%le,%le," , A[i].x,A[i].y,A[i].z);
-    }
-    fprintf(fp1,"\n");
+    Acceleration<<<1, 1>>>(Acc_d, &aft_d, &bef_d, dif_h, out, outNum, t);
 
-    swapBefAft(&aft_host, &bef_host, ran_host);
+    swapBefAft<<<1, 1>>>(&aft_d, &bef_d, ran);
     progressBar(t, tmax);
+  }
+  cudaMemcpy(Acc_d, Acc_h, outNum * sizeof(Coord_acc *), cudaMemcpyDeviceToHost);
+  for (int j = 0; j < tmax; j++) {
+    for (int i = 0; i < outNum; i++) {
+      printf("ok\n");
+      fprintf(fp1,"%le,%le,%le,", Acc_h[i][j].x, Acc_h[i][j].y, Acc_h[i][j].z);
+    }
+    fprintf(fp1, "\n");
+    progressBar(j, tmax);
   }
   fclose(fp1);
   printf("loop end.\n");
