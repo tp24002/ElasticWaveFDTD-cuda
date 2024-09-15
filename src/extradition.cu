@@ -10,25 +10,58 @@
 ////// メモリ確保
 
 // 3d array メモリ確保
+// void allocate3DArray(double ****array, int x, int y, int z) {
+//     // 1. ホスト側のポインタをデバイス側に転送するためのメモリを確保
+//     double ***temp_array;
+//     double **temp_row;
+//     double *temp_col;
+//     cudaMalloc((void **)&temp_array, x * sizeof(double **));
+//     for (int i = 0; i < x; i++) {
+//         cudaMalloc((void **)&temp_row, y * sizeof(double *));
+//         for (int j = 0; j < y; j++) {
+//             cudaMalloc((void **)&temp_col, z * sizeof(double));
+//             // デバイスメモリにtemp_row[j]を設定
+//             cudaMemcpy(&temp_row[j], &temp_col, sizeof(double *), cudaMemcpyHostToDevice);
+//         }
+//         // デバイスメモリにtemp_array[i]を設定
+//         cudaMemcpy(&temp_array[i], &temp_row, sizeof(double **), cudaMemcpyHostToDevice);
+//     }
+//     // ホスト側のポインタにデバイスのポインタを設定
+//     *array = temp_array;
+// }
+
 void allocate3DArray(double ****array, int x, int y, int z) {
-    // 1. ホスト側のポインタをデバイス側に転送するためのメモリを確保
     double ***temp_array;
-    cudaMalloc((void **)&temp_array, x * sizeof(double **));
+    double **temp_row;
+    double *temp_col;
+
+    // 1. 連続したデバイスメモリを一度に確保（3次元分）
+    cudaError_t err = cudaMalloc((void **)&temp_col, x * y * z * sizeof(double));
+
+    // 2. y方向のポインタ配列を連続して確保
+    err = cudaMalloc((void **)&temp_row, x * y * sizeof(double*));
+
+    // 3. x方向のポインタ配列を連続して確保
+    err = cudaMalloc((void **)&temp_array, x * sizeof(double**));
+
+    // 4. 各ポインタを設定
     for (int i = 0; i < x; i++) {
-        double **temp_row;
-        cudaMalloc((void **)&temp_row, y * sizeof(double *));
+        // temp_rowのポインタをi番目の行に設定
+        err = cudaMemcpy(&temp_array[i], &temp_row[i * y], sizeof(double*), cudaMemcpyHostToDevice);
         for (int j = 0; j < y; j++) {
-            double *temp_col;
-            cudaMalloc((void **)&temp_col, z * sizeof(double));
-            // デバイスメモリにtemp_row[j]を設定
-            cudaMemcpy(&temp_row[j], &temp_col, sizeof(double *), cudaMemcpyHostToDevice);
+            // temp_colのポインタをi番目、j番目に設定
+            err = cudaMemcpy(&temp_row[i * y + j], &temp_col[(i * y + j) * z], sizeof(double), cudaMemcpyHostToDevice);
         }
-        // デバイスメモリにtemp_array[i]を設定
-        cudaMemcpy(&temp_array[i], &temp_row, sizeof(double **), cudaMemcpyHostToDevice);
     }
-    // ホスト側のポインタにデバイスのポインタを設定
+    if (err != cudaSuccess) {
+        printf("cudaMalloc failed: %s\n", cudaGetErrorString(err));
+        return;
+    }
+    // 5. ホスト側のポインタにデバイスのポインタを設定
     *array = temp_array;
+
 }
+
 // メモリ確保 BefAft
 void allocateBefAft(BefAft *d_befAft, Range ran) {
     // メモリをGPUに割り当て
@@ -107,7 +140,6 @@ void allocateMedArr(MedArr *d_medArr, Range ran) {
 // メモリ確保 Inpaluse
 void allocateInpaluse(Inpaluse *d_inpaluse, Range ran) {
     cudaMalloc((void **)&(d_inpaluse->in), sizeof(Coord));
-
     allocate3DArray(&d_inpaluse->Txx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
     allocate3DArray(&d_inpaluse->Tyy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
     allocate3DArray(&d_inpaluse->Tzz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
@@ -116,23 +148,51 @@ void allocateInpaluse(Inpaluse *d_inpaluse, Range ran) {
 
 ////// データ転送 ホスト->デバイス
 
-// 3d array ホスト->デバイス
+// ホスト->デバイス 3d array
 void copy3DArrayToDevice(double ***d_array, double ***h_array, int x, int y, int z) {
-    // 1. ホスト側の配列をデバイス側にコピーするための準備
-    double **d_row;
-    double *d_col;
+    cudaError_t err;
 
-    // 2. 各次元ごとにデータをコピー
+    // 1. 各次元ごとのメモリをデバイス側に割り当て
     for (int i = 0; i < x; i++) {
-        // デバイス側の2次元ポインタを取得
-        cudaMemcpy(&d_row, &d_array[i], sizeof(double **), cudaMemcpyDeviceToHost);
+        double **d_row;
+        double *d_col;
+
+        // デバイス側で2次元目のポインタ用のメモリを確保
+        err = cudaMalloc((void**)&d_row, y * sizeof(double *));
+        if (err != cudaSuccess) {
+            printf("Error allocating memory for d_row: %s\n", cudaGetErrorString(err));
+            return;
+        }
 
         for (int j = 0; j < y; j++) {
-            // デバイス側の1次元ポインタを取得
-            cudaMemcpy(&d_col, &d_row[j], sizeof(double *), cudaMemcpyDeviceToHost);
+            // デバイス側で1次元目の配列（データ本体）用のメモリを確保
+            err = cudaMalloc((void**)&d_col, z * sizeof(double));
+            if (err != cudaSuccess) {
+                printf("Error allocating memory for d_col: %s\n", cudaGetErrorString(err));
+                return;
+            }
 
-            // ホストからデバイスへデータコピー
-            cudaMemcpy(d_col, h_array[i][j], z * sizeof(double), cudaMemcpyHostToDevice);
+            // ホストからデバイスへデータをコピー
+            err = cudaMemcpy(d_col, h_array[i][j], z * sizeof(double), cudaMemcpyHostToDevice);
+            if (err != cudaSuccess) {
+                printf("Error copying data to device: %s\n", cudaGetErrorString(err));
+                return;
+            }
+
+            // 2次元目のポインタ配列に1次元目のポインタをセット
+            err = cudaMemcpy(&d_row[j], &d_col, sizeof(double *), cudaMemcpyHostToDevice);
+            if (err != cudaSuccess) {
+                printf("Error copying pointer to device1: %s\n", cudaGetErrorString(err));
+                return;
+            }
+        }
+        
+        // デバイス側の3次元目のポインタ配列に2次元目のポインタをセット
+        // err = cudaMemcpy(&d_array[i], &d_row, sizeof(double **), cudaMemcpyHostToDevice);
+        err = cudaMemcpy(d_array + i, &d_row, sizeof(double **), cudaMemcpyHostToDevice);
+        if (err != cudaSuccess) {
+            printf("Error copying pointer to device2: %s\n", cudaGetErrorString(err));
+            return;
         }
     }
 }
@@ -190,7 +250,6 @@ void copyInpaluseToDevice(Inpaluse *d_inpaluse, Inpaluse *h_inpaluse, Range ran)
     int Txxi = ran.sr.Txx.x, Txxj = ran.sr.Txx.y, Txxk = ran.sr.Txx.z;
     int Tyyi = ran.sr.Tyy.x, Tyyj = ran.sr.Tyy.y, Tyyk = ran.sr.Tyy.z;
     int Tzzi = ran.sr.Tzz.x, Tzzj = ran.sr.Tzz.y, Tzzk = ran.sr.Tzz.z;
-
     // 3D配列データの転送 (Txx, Tyy, Tzz)
     copy3DArrayToDevice(d_inpaluse->Txx, h_inpaluse->Txx, Txxi, Txxj, Txxk);
     copy3DArrayToDevice(d_inpaluse->Tyy, h_inpaluse->Tyy, Tyyi, Tyyj, Tyyk);
@@ -199,6 +258,7 @@ void copyInpaluseToDevice(Inpaluse *d_inpaluse, Inpaluse *h_inpaluse, Range ran)
     cudaMemcpy(&(d_inpaluse->freq), &(h_inpaluse->freq), sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(&(d_inpaluse->mode), &(h_inpaluse->mode), sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(&(d_inpaluse->in), &(h_inpaluse->in), sizeof(Coord), cudaMemcpyHostToDevice);
+    printf("host:%f\n",h_inpaluse->Tzz[h_inpaluse->in.x][h_inpaluse->in.y][h_inpaluse->in.z]);
 }
 // ホスト->デバイス MedArr
 void copyMedArrToDevice(MedArr *d_medArr, MedArr *h_medArr, Range ran) {
@@ -302,4 +362,130 @@ void copyBefAftToHost(BefAft *h_befAft, BefAft *d_befAft, Range ran) {
     copy3DArrayToHost(h_befAft->va.Vzx, d_befAft->va.Vzx, Vzi, Vzj, Vzk);
     copy3DArrayToHost(h_befAft->va.Vzy, d_befAft->va.Vzy, Vzi, Vzj, Vzk);
     copy3DArrayToHost(h_befAft->va.Vzz, d_befAft->va.Vzz, Vzi, Vzj, Vzk);
+}
+
+// hostメモリ確保
+
+void allocate3DArrayHost(double ****array, int x, int y, int z) {
+    double ***temp_array;
+    double **temp_row;
+    double *temp_col;
+
+    // 1. 連続したメモリ領域を確保（3次元分）
+    temp_col = (double *)malloc(x * y * z * sizeof(double));
+    if (temp_col == NULL) {
+        printf("Memory allocation for data failed.\n");
+        return;
+    }
+
+    // 2. y方向のポインタ配列を連続して確保
+    temp_row = (double **)malloc(x * y * sizeof(double*));
+    if (temp_row == NULL) {
+        printf("Memory allocation for row pointers failed.\n");
+        free(temp_col);  // 確保済みのメモリを解放
+        return;
+    }
+
+    // 3. x方向のポインタ配列を連続して確保
+    temp_array = (double ***)malloc(x * sizeof(double**));
+    if (temp_array == NULL) {
+        printf("Memory allocation for array pointers failed.\n");
+        free(temp_row);  // 確保済みのメモリを解放
+        free(temp_col);  // 確保済みのメモリを解放
+        return;
+    }
+
+    // 4. 各ポインタを設定
+    for (int i = 0; i < x; i++) {
+        temp_array[i] = &temp_row[i * y];  // temp_rowのポインタを設定
+        for (int j = 0; j < y; j++) {
+            temp_row[i * y + j] = &temp_col[(i * y + j) * z];  // temp_colのポインタを設定
+        }
+    }
+
+    // 5. ホスト側のポインタに確保したメモリを設定
+    *array = temp_array;
+}
+
+// メモリ確保 BefAft
+void allocateBefAftHost(BefAft *d_befAft, Range ran) {
+    // メモリをGPUに割り当て
+    cudaMalloc((void **)&(d_befAft->sa), sizeof(SigArr));
+    cudaMalloc((void **)&(d_befAft->ta), sizeof(TauArr));
+    cudaMalloc((void **)&(d_befAft->va), sizeof(VelArr));
+    
+    // SigArr のメンバのメモリ確保
+    allocate3DArrayHost(&d_befAft->sa.Txx , ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_befAft->sa.Txxx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_befAft->sa.Txxy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_befAft->sa.Txxz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_befAft->sa.Tyy , ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArrayHost(&d_befAft->sa.Tyyx, ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArrayHost(&d_befAft->sa.Tyyy, ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArrayHost(&d_befAft->sa.Tyyz, ran.sr.Tyy.x, ran.sr.Tyy.y, ran.sr.Tyy.z);
+    allocate3DArrayHost(&d_befAft->sa.Tzz , ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
+    allocate3DArrayHost(&d_befAft->sa.Tzzx, ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
+    allocate3DArrayHost(&d_befAft->sa.Tzzy, ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
+    allocate3DArrayHost(&d_befAft->sa.Tzzz, ran.sr.Tzz.x, ran.sr.Tzz.y, ran.sr.Tzz.z);
+
+    // TauArr のメンバのメモリ確保
+    allocate3DArrayHost(&d_befAft->ta.Txy , ran.tr.Txy.x, ran.tr.Txy.y, ran.tr.Txy.z);
+    allocate3DArrayHost(&d_befAft->ta.Txyx, ran.tr.Txy.x, ran.tr.Txy.y, ran.tr.Txy.z);
+    allocate3DArrayHost(&d_befAft->ta.Txyy, ran.tr.Txy.x, ran.tr.Txy.y, ran.tr.Txy.z);
+    allocate3DArrayHost(&d_befAft->ta.Tyz , ran.tr.Tyz.x, ran.tr.Tyz.y, ran.tr.Tyz.z);
+    allocate3DArrayHost(&d_befAft->ta.Tyzy, ran.tr.Tyz.x, ran.tr.Tyz.y, ran.tr.Tyz.z);
+    allocate3DArrayHost(&d_befAft->ta.Tyzz, ran.tr.Tyz.x, ran.tr.Tyz.y, ran.tr.Tyz.z);
+    allocate3DArrayHost(&d_befAft->ta.Tzx , ran.tr.Tzx.x, ran.tr.Tzx.y, ran.tr.Tzx.z);
+    allocate3DArrayHost(&d_befAft->ta.Tzxz, ran.tr.Tzx.x, ran.tr.Tzx.y, ran.tr.Tzx.z);
+    allocate3DArrayHost(&d_befAft->ta.Tzxx, ran.tr.Tzx.x, ran.tr.Tzx.y, ran.tr.Tzx.z);
+
+    // VelArr のメンバのメモリ確保
+    allocate3DArrayHost(&d_befAft->va.Vx , ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArrayHost(&d_befAft->va.Vxx, ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArrayHost(&d_befAft->va.Vxy, ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArrayHost(&d_befAft->va.Vxz, ran.vr.Vx.x, ran.vr.Vx.y, ran.vr.Vx.z);
+    allocate3DArrayHost(&d_befAft->va.Vy , ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArrayHost(&d_befAft->va.Vyx, ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArrayHost(&d_befAft->va.Vyy, ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArrayHost(&d_befAft->va.Vyz, ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArrayHost(&d_befAft->va.Vz , ran.vr.Vy.x, ran.vr.Vy.y, ran.vr.Vy.z);
+    allocate3DArrayHost(&d_befAft->va.Vzx, ran.vr.Vz.x, ran.vr.Vz.y, ran.vr.Vz.z);
+    allocate3DArrayHost(&d_befAft->va.Vzy, ran.vr.Vz.x, ran.vr.Vz.y, ran.vr.Vz.z);
+    allocate3DArrayHost(&d_befAft->va.Vzz, ran.vr.Vz.x, ran.vr.Vz.y, ran.vr.Vz.z);
+}
+
+// メモリ確保 MedArr
+void allocateMedArrHost(MedArr *d_medArr, Range ran) {
+    // 各メンバ変数のメモリをGPUに割り当て
+    allocate3DArrayHost(&d_medArr->ramda, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->mu, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->c11, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->rho, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+
+    // ゼータ（zetaxx, zetaxy, など）のメモリをGPUに割り当て
+    allocate3DArrayHost(&d_medArr->zetaxx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetaxy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetaxz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetayx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetayy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetayz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetazx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetazy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetazz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+
+    // その他のメンバ変数のメモリをGPUに割り当て
+    allocate3DArrayHost(&d_medArr->gamma, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->khi, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->xi11, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetadx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetady, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_medArr->zetadz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+}
+
+// メモリ確保 Inpaluse
+void allocateInpaluseHost(Inpaluse *d_inpaluse, Range ran) {
+    cudaMalloc((void **)&(d_inpaluse->in), sizeof(Coord));
+    allocate3DArrayHost(&d_inpaluse->Txx, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_inpaluse->Tyy, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
+    allocate3DArrayHost(&d_inpaluse->Tzz, ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
 }

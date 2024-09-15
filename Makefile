@@ -6,15 +6,13 @@ main.o:	./main.cu
 		nvcc -o ./object/main.o -c ./main.cu
 extradition.o:	./src/extradition.cu
 		nvcc -o ./object/extradition.o -c ./src/extradition.cu
-# main.o: ./main3.c
-# 		gcc -o ./object/main.o -c ./main3.c
 init.o: ./src/init.cu
 		nvcc -o ./object/init.o -c ./src/init.cu
 insert.o: ./src/insert.cu
 		nvcc -o ./object/insert.o -c ./src/insert.cu -lm
 update.o: ./src/update.cu
 		nvcc -o ./object/update.o -c ./src/update.cu -Xcompiler -fopenmp -O3
-# print.o: ./src/print.c
-# 		gcc -o ./object/print.o -c ./src/print.c
+# print.o: ./src/print.cu
+# 		nvcc -o ./object/print.o -c ./src/print.cu
 para_in.o: ./src/para_in.cu
 		nvcc -o ./object/para_in.o -c ./src/para_in.cu

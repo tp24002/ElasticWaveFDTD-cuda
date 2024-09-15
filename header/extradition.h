@@ -16,3 +16,8 @@ void copyDiffToDevice(Diff *d_diff, Diff *h_diff);
 // データ転送 to Host
 void copy3DArrayToHost(double ***h_array, double ***d_array, int x, int y, int z);
 void copyBefAftToHost(BefAft *h_befAft, BefAft *d_befAft, Range ran);
+
+void allocate3DArrayHost(double ****array, int x, int y, int z);
+void allocateBefAftHost(BefAft *d_befAft, Range ran);
+void allocateMedArrHost(MedArr *d_medArr, Range ran);
+void allocateInpaluseHost(Inpaluse *d_inpaluse, Range ran);

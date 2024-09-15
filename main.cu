@@ -43,7 +43,7 @@ int main(void) {
   Coord con_st;
   Coord clack_size;
   Coord clack_st;
-  Coord out[256];
+  Coord out[16];
   Coord center;
   int outNum;
   int tmax;
@@ -60,14 +60,18 @@ int main(void) {
   // 外部入力
   para_in(&region,&center,&con_st,&con_size,&clack_st,&clack_size,out,&ip_h,&outNum,&tmax);
   printf("region:(%d,%d,%d)\n", region.x, region.y, region.z);
+  // 関数化推奨
   // 加速度メモリ確保
   Acc_h = (Coord_acc **)malloc(sizeof(Coord_acc *) * outNum);
   for (int i = 0; i < outNum; i++) {
-      Acc_h[i] = (Coord_acc *)malloc(tmax * sizeof(Coord_acc));
+    Acc_h[i] = (Coord_acc *)malloc(tmax * sizeof(Coord_acc));
   }
   cudaMalloc((void **)&Acc_d, outNum * sizeof(Coord_acc *));
   for (int i = 0; i < outNum; i++) {
-    cudaMalloc((void **)&Acc_h[i], tmax * sizeof(Coord_acc));
+    Coord_acc *temp_d;
+    cudaMalloc((void **)&temp_d, tmax * sizeof(Coord_acc));
+    cudaMemcpy(Acc_h[i], temp_d, tmax * sizeof(Coord_acc), cudaMemcpyHostToDevice);
+    cudaMemcpy(&Acc_d[i], &temp_d, sizeof(Coord_acc *), cudaMemcpyHostToDevice);
   }
   // 媒質パターン設定
   initMedium(med);
@@ -86,27 +90,32 @@ int main(void) {
   printf("size:%d,%d,%d\n",con.range.x,con.range.y,con.range.z);
   // 計算領域設定
   initRange(&ran, region.x, region.y, region.z, pml);
-  initRange(&ran, region.x, region.y, region.z, pml);
+  printf("rangeTii:(%d,%d,%d)\n", ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
   // hostメモリ確保
   // bef = (BefAft *)malloc(sizeof(BefAft));
-  initHostBefAft(&bef_h, ran);
-  initHostBefAft(&aft_h, ran);
+  // initHostBefAft(&bef_h, ran);
+  // initHostBefAft(&aft_h, ran);
+  allocateBefAftHost(&bef_h, ran);
+  allocateBefAftHost(&aft_h, ran);
 
   // 媒質メモリ確保
   initHostMedArr(&ma_h, ran.sr);
+  allocateMedArrHost(&ma_h, ran);
   // 入力情報メモリ確保
-  initHostInpalse(&ip_h, ran.sr, pml, ip_h.mode, ip_h.in.x, ip_h.in.y, ip_h.in.z, ip_h.freq);//
+  // initHostInpalse(&ip_h, ran.sr, pml, ip_h.mode, ip_h.in.x, ip_h.in.y, ip_h.in.z, ip_h.freq);//
+  allocateInpaluseHost(&ip_h, ran);
+  
   // 入力情報出力(複数地点になったら要変更)
   printf("in:%d,%d,%d\n", ip_h.in.x, ip_h.in.y, ip_h.in.z);
-  if(ip_h.mode == E_SINE){
-    printf("sin:%f\n", ip_h.freq);
-  } else if(ip_h.mode == E_RCOS){
-    printf("cos:%f\n", ip_h.freq);
-  }
-  // 計測地点出力
-  for(int outnum = 0; outnum < outNum; outnum++){
-    printf("out:%d,%d,%d\n",out[outnum].x,out[outnum].y,out[outnum].z);
-  }
+  // if(ip_h.mode == E_SINE){
+  //   printf("sin:%f\n", ip_h.freq);
+  // } else if(ip_h.mode == E_RCOS){
+  //   printf("cos:%f\n", ip_h.freq);
+  // }
+  // // 計測地点出力
+  // for(int outnum = 0; outnum < outNum; outnum++){
+  //   printf("out:%d,%d,%d\n",out[outnum].x,out[outnum].y,out[outnum].z);
+  // }
 
   insertAir(&ma_h, ran.sr, med[E_AIR]);
   printf("airok\n");
@@ -163,11 +172,14 @@ int main(void) {
   printf("aloocate MedArr ok\n");
   allocateInpaluse(&ip_d, ran);
   printf("aloocate Inpaluse ok\n");
-
+  // double test;
   for (int t = 0; t < tmax; t++) {
     insertInpulse(&ip_h, dif_h, t);
     copyInpaluseToDevice(&ip_d, &ip_h, ran);
+    
+    // printf("%f\n",ip_h.Tzz[ip_h.in.x][ip_h.in.y][ip_h.in.z]);
 
+    // printf("%f\n",ip_d.freq);
     Vel(&aft_h, &bef_h, &aft_d, &bef_d, ma_h, &ma_d, dif_h, &dif_d, ran, threads);
     // printf("okVel\n");
 
@@ -180,12 +192,16 @@ int main(void) {
     Acceleration<<<1, 1>>>(Acc_d, &aft_d, &bef_d, dif_h, out, outNum, t);
 
     swapBefAft<<<1, 1>>>(&aft_d, &bef_d, ran);
-    progressBar(t, tmax);
+    // progressBar(t, tmax);
   }
-  cudaMemcpy(Acc_d, Acc_h, outNum * sizeof(Coord_acc *), cudaMemcpyDeviceToHost);
+
+  cudaError_t err = cudaMemcpy(Acc_d, Acc_h, outNum * sizeof(Coord_acc *), cudaMemcpyDeviceToHost);
+  if (err != cudaSuccess) {
+    printf("acc d to h Error: %s\n", cudaGetErrorString(err));
+    return;
+  }
   for (int j = 0; j < tmax; j++) {
     for (int i = 0; i < outNum; i++) {
-      printf("ok\n");
       fprintf(fp1,"%le,%le,%le,", Acc_h[i][j].x, Acc_h[i][j].y, Acc_h[i][j].z);
     }
     fprintf(fp1, "\n");

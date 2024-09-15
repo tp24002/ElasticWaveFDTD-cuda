@@ -13,9 +13,6 @@
 
 // 垂直応力
 
-// 引数に(int imax, int jmax, int kmax)を用いている理由はない
-// (SigRan sr)でも良い，ただ最初に書いたコードがこれだっただけ
-// max:構造体にまとめていいかも
 // 垂直応力更新並列関数
 __global__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Coord Txx) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
@@ -193,7 +190,8 @@ __global__ void DirectionalAdd(BefAft *aft, Inpaluse *ip, Coord ranmax, char che
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
-
+  // printf("device:%f\n",ip->Tzz[ip->in.x][ip->in.y][ip->in.z]);
+  printf("device:%f\n",ip->Tzz[0][0][0]);
   int imax = ranmax.x, jmax = ranmax.y, kmax = ranmax.z;
 
   if(i > imax || j > jmax || k > kmax) {
@@ -216,10 +214,14 @@ void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   Coord ranmax;
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("txx1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("txx2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("txx3\n");
   copyDiffToDevice(dif_d, &dif_h);
-  copyInpaluseToDevice(ip_d, &ip_h, ran);
+  // printf("txx4\n");
+  // copyInpaluseToDevice(ip_d, &ip_h, ran);
 
   int Txximax = ran.sr.Txx.x, Txxjmax = ran.sr.Txx.y, Txxkmax = ran.sr.Txx.z;
   initCoord(&ranmax, Txximax, Txxjmax, Txxkmax);
@@ -240,9 +242,15 @@ void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
   ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
   ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
+  cudaDeviceSynchronize();
   //全方向加算
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
-  // copyBefAftToHost(aft_h, aft_d, ran);
+  cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
+  if (err != cudaSuccess) {
+      printf("CUDA error: %s\n", cudaGetErrorString(err));
+  }
+  cudaDeviceSynchronize();
+    // copyBefAftToHost(aft_h, aft_d, ran);
   // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Tyyクラス的な(Blocks大丈夫かな？)
@@ -251,10 +259,14 @@ void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   Coord ranmax;
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("tyy1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("tyy2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("tyy3\n");
   copyDiffToDevice(dif_d, &dif_h);
-  copyInpaluseToDevice(ip_d, &ip_h, ran);
+  // printf("tyy4\n");
+  // copyInpaluseToDevice(ip_d, &ip_h, ran);
 
   int Tyyimax = ran.sr.Tyy.x, Tyyjmax = ran.sr.Tyy.y, Tyykmax = ran.sr.Tyy.z;
   initCoord(&ranmax, Tyyimax, Tyyjmax, Tyykmax);
@@ -275,8 +287,14 @@ void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
   ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
   ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
+  cudaDeviceSynchronize();
   // 全方向加算
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
+  cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
+  if (err != cudaSuccess) {
+      printf("CUDA error: %s\n", cudaGetErrorString(err));
+  }
+  cudaDeviceSynchronize();
   // データ転送device to host
   // copyBefAftToHost(aft_h, aft_d, ran);
   // copyBefAftToHost(bef_h, bef_d, ran);
@@ -287,10 +305,14 @@ void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   Coord ranmax;
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("tzz1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("tzz2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("tzz3\n");
   copyDiffToDevice(dif_d, &dif_h);
-  copyInpaluseToDevice(ip_d, &ip_h, ran);
+  // printf("tzz4\n");
+  // copyInpaluseToDevice(ip_d, &ip_h, ran);
 
   int Tzzimax = ran.sr.Tzz.x, Tzzjmax = ran.sr.Tzz.y, Tzzkmax = ran.sr.Tzz.z;
   initCoord(&ranmax, Tzzimax, Tzzjmax, Tzzkmax);
@@ -310,8 +332,14 @@ void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
   ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
   ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ranmax, check);
+  cudaDeviceSynchronize();
   // 全方向加算
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
+  cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
+  if (err != cudaSuccess) {
+      printf("CUDA error: %s\n", cudaGetErrorString(err));
+  }
+  cudaDeviceSynchronize(); 
   // データ転送device to host
   // copyBefAftToHost(aft_h, aft_d, ran);
   // copyBefAftToHost(bef_h, bef_d, ran);
@@ -458,9 +486,13 @@ void Txy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
 
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("txy1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("txy2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("txy3\n");
   copyDiffToDevice(dif_d, &dif_h);
+  // printf("txy4\n");
 
   int Txyimax = ran.tr.Txy.x, Txyjmax = ran.tr.Txy.y, Txykmax = ran.tr.Txy.z;
 
@@ -474,6 +506,7 @@ void Txy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
                             (Txykmax + threadsPerBlock.z) / threadsPerBlock.z);                    
   TxyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran.tr);
   ZeroTxy<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran.tr.Txy);
+  cudaDeviceSynchronize(); 
   DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Txy, 'Z');
   // データ転送device to host
   // copyBefAftToHost(aft_h, aft_d, ran);
@@ -484,9 +517,13 @@ void Tyz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("tyz1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("tyz2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("tyz3\n");
   copyDiffToDevice(dif_d, &dif_h);
+  // printf("tyz4\n");
 
   int Tyzimax = ran.tr.Tyz.x, Tyzjmax = ran.tr.Tyz.y, Tyzkmax = ran.tr.Tyz.z;
 
@@ -500,6 +537,7 @@ void Tyz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
                             (Tyzkmax + threadsPerBlock.z) / threadsPerBlock.z);                    
   TyzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran.tr);
   ZeroTyz<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tyz);
+  cudaDeviceSynchronize(); 
   DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tyz, 'X');
   // データ転送device to host
   // copyBefAftToHost(aft_h, aft_d, ran);
@@ -510,9 +548,13 @@ void Tzx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("tzx1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("tzx2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("tzx3\n");
   copyDiffToDevice(dif_d, &dif_h);
+  // printf("tzx4\n");
 
   int Tzximax = ran.tr.Tzx.x, Tzxjmax = ran.tr.Tzx.y, Tzxkmax = ran.tr.Tzx.z;
 
@@ -526,6 +568,7 @@ void Tzx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
                             (Tzxkmax + threadsPerBlock.z) / threadsPerBlock.z);                  
   TzxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran.tr);
   ZeroTzx<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tzx);
+  cudaDeviceSynchronize(); 
   DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.tr.Tzx , 'Y');
   // データ転送device to host
   // copyBefAftToHost(aft_h, aft_d, ran);
@@ -714,9 +757,13 @@ void Vx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("vx1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("vx2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("vx3\n");
   copyDiffToDevice(dif_d, &dif_h);
+  // printf("vx4\n");
   
   int Vximax = ran.vr.Vx.x, Vxjmax = ran.vr.Vx.y, Vxkmax = ran.vr.Vx.z;
 
@@ -735,6 +782,7 @@ void Vx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   VxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran.vr);
   ZeroVx_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vx);
   ZeroVx_XZ<<<ZeroXZBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vx);
+  cudaDeviceSynchronize(); 
   DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vx , 'X');
   // device->hostデータ転送
   // copyBefAftToHost(aft_h, aft_d, ran);
@@ -745,9 +793,13 @@ void Vy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("vy1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("vy2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("vy3\n");
   copyDiffToDevice(dif_d, &dif_h);
+  // printf("vy4\n");
 
   int Vyimax = ran.vr.Vy.x, Vyjmax = ran.vr.Vy.y, Vykmax = ran.vr.Vy.z;
 
@@ -765,6 +817,7 @@ void Vy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   VyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran.vr);
   ZeroVy_YX<<<ZeroYXBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vy);
   ZeroVy_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vy);
+  cudaDeviceSynchronize(); 
   //全方向加算
   DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vy , 'Y');
   // データ転送device to host
@@ -776,9 +829,13 @@ void Vz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
 
   // host->deviceデータ転送
   copyBefAftToDevice(aft_d, aft_h, ran);
+  // printf("vz1\n");
   copyBefAftToDevice(bef_d, bef_h, ran);
+  // printf("vz2\n");
   copyMedArrToDevice(ma_d, &ma_h, ran);
+  // printf("vz3\n");
   copyDiffToDevice(dif_d, &dif_h);
+  // printf("vz4\n");
 
   int Vzimax = ran.vr.Vz.x, Vzjmax = ran.vr.Vz.y, Vzkmax = ran.vr.Vz.z;
 
@@ -796,6 +853,7 @@ void Vz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   VzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran.vr);
   ZeroVz_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vz);
   ZeroVz_ZY<<<ZeroZYBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vz);
+  cudaDeviceSynchronize(); 
   //全方向加算
   DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran.vr.Vz , 'Z');
   // データ転送device to host

@@ -90,75 +90,25 @@ void initConcrete(Object *con, Medium med, Pml pml, int spx, int spy, int spz, i
 }
 
 void initRange(Range *ran, int x, int y, int z, Pml pml) {
+  // initCoord(&ran->sr.Txx, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initCoord(&ran->sr.Tyy, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initCoord(&ran->sr.Tzz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initCoord(&ran->tr.Txy, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
+  // initCoord(&ran->tr.Tyz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z - 1);
+  // initCoord(&ran->tr.Tzx, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
+  // initCoord(&ran->vr.Vx , x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initCoord(&ran->vr.Vy , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
+  // initCoord(&ran->vr.Vz , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
   initCoord(&ran->sr.Txx, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
   initCoord(&ran->sr.Tyy, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
   initCoord(&ran->sr.Tzz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->tr.Txy, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->tr.Tyz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z - 1);
-  initCoord(&ran->tr.Tzx, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
-  initCoord(&ran->vr.Vx , x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->vr.Vy , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->vr.Vz , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
+  initCoord(&ran->tr.Txy, x + pml.pl1.x + pml.pl2.x + 1, y + pml.pl1.y + pml.pl2.y + 1, z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->tr.Tyz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y + 1, z + pml.pl1.z + pml.pl2.z + 1);
+  initCoord(&ran->tr.Tzx, x + pml.pl1.x + pml.pl2.x + 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z + 1);
+  initCoord(&ran->vr.Vx , x + pml.pl1.x + pml.pl2.x + 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->vr.Vy , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y + 1, z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->vr.Vz , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z + 1);
 } 
-
-void initDeviceSigArr(SigArr *sa, SigRan sr) {
-  int i, j;
-
-  cudaMalloc((void ***)&sa->Txx , sr.Txx.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Txxx, sr.Txx.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Txxy, sr.Txx.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Txxz, sr.Txx.x * sizeof(double **));
-  
-  for (i = 0; i < sr.Txx.x + 1; i++) {
-    cudaMalloc((void ***)&sa->Txx[i] , sr.Txx.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Txxx[i], sr.Txx.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Txxy[i], sr.Txx.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Txxz[i], sr.Txx.y * sizeof(double *));
-    // 3次元目のポインタもメモリ割り当て
-    for (j = 0; j < sr.Txx.y + 1; j++) {
-      cudaMalloc((void ***)&sa->Txx[i][j] , sr.Txx.z * sizeof(double));
-      cudaMalloc((void ***)&sa->Txxx[i][j], sr.Txx.z * sizeof(double));
-      cudaMalloc((void ***)&sa->Txxy[i][j], sr.Txx.z * sizeof(double));
-      cudaMalloc((void ***)&sa->Txxz[i][j], sr.Txx.z * sizeof(double));
-    }
-  }
-    
-  cudaMalloc((void ***)&sa->Tyy , sr.Tyy.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Tyyx, sr.Tyy.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Tyyy, sr.Tyy.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Tyyz, sr.Tyy.x * sizeof(double **));
-  for (i = 0; i < sr.Tyy.x + 1; i++) {
-    cudaMalloc((void ***)&sa->Tyy[i] , sr.Tyy.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Tyyx[i], sr.Tyy.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Tyyy[i], sr.Tyy.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Tyyz[i], sr.Tyy.y * sizeof(double *));
-    // 3次元目のポインタもメモリ割り当て
-    for (j = 0; j < sr.Tyy.y + 1; j++) {
-      cudaMalloc((void ***)&sa->Tyy[i][j] , sr.Tyy.x * sizeof(double));
-      cudaMalloc((void ***)&sa->Tyyx[i][j], sr.Tyy.x * sizeof(double));
-      cudaMalloc((void ***)&sa->Tyyy[i][j], sr.Tyy.x * sizeof(double));
-      cudaMalloc((void ***)&sa->Tyyz[i][j], sr.Tyy.x * sizeof(double));
-    }
-  }
-    
-  cudaMalloc((void ***)&sa->Tzz , sr.Tzz.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Tzzx, sr.Tzz.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Tzzy, sr.Tzz.x * sizeof(double **));
-  cudaMalloc((void ***)&sa->Tzzz, sr.Tzz.x * sizeof(double **));
-  for (i = 0; i < sr.Tzz.x + 1; i++) {
-    cudaMalloc((void ***)&sa->Tzz[i] , sr.Tzz.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Tzzx[i], sr.Tzz.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Tzzy[i], sr.Tzz.y * sizeof(double *));
-    cudaMalloc((void ***)&sa->Tzzz[i], sr.Tzz.y * sizeof(double *));
-    // 3次元目のポインタもメモリ割り当て
-    for (j = 0; j < sr.Tzz.y + 1; j++) {
-      cudaMalloc((void ***)&sa->Tzz[i][j] , sr.Tzz.z * sizeof(double));
-      cudaMalloc((void ***)&sa->Tzzx[i][j], sr.Tzz.z * sizeof(double));
-      cudaMalloc((void ***)&sa->Tzzy[i][j], sr.Tzz.z * sizeof(double));
-      cudaMalloc((void ***)&sa->Tzzz[i][j], sr.Tzz.z * sizeof(double));
-    }
-  }
-}
 
 void initHostSigArr(SigArr *sa, SigRan sr) {
   int i, j;
@@ -212,60 +162,6 @@ void initHostSigArr(SigArr *sa, SigRan sr) {
   }
 }
 
-void initDeviceTauArr(TauArr *ta, TauRan tr) {
-  int i, j;
-  // 1次元目のポインタをデバイスメモリに割り当て (X方向)
-  cudaMalloc((void ***)ta->Txy , tr.Txy.x * sizeof(double **));
-  cudaMalloc((void ***)ta->Txyx, tr.Txy.x * sizeof(double **));
-  cudaMalloc((void ***)ta->Txyy, tr.Txy.x * sizeof(double **));
-  // 2次元目のポインタをデバイスメモリに割り当て (Y方向)
-  for (i = 0; i < tr.Txy.x; i++) {
-    cudaMalloc((void ***)ta->Txy, tr.Txy.y * sizeof(double *));
-    cudaMalloc((void ***)ta->Txyx, tr.Txy.y * sizeof(double *));
-    cudaMalloc((void ***)ta->Txyy, tr.Txy.y * sizeof(double *));
-    // 3次元目のポインタをデバイスメモリに割り当て (Z方向)
-    for (j = 0; j < tr.Txy.y; j++) {
-      cudaMalloc((void ***)ta->Txy, tr.Txy.z * sizeof(double));
-      cudaMalloc((void ***)ta->Txyx, tr.Txy.z * sizeof(double));
-      cudaMalloc((void ***)ta->Txyy, tr.Txy.z * sizeof(double));
-    }
-  }
-    
-  // 1次元目のポインタをデバイスメモリに割り当て (X方向)
-  cudaMalloc((void ***)ta->Tyz , tr.Txy.x * sizeof(double **));
-  cudaMalloc((void ***)ta->Tyzy, tr.Txy.x * sizeof(double **));
-  cudaMalloc((void ***)ta->Tyzz, tr.Txy.x * sizeof(double **));
-  // 2次元目のポインタをデバイスメモリに割り当て (Y方向)
-  for (int i = 0; i < tr.Txy.x; i++) {
-    cudaMalloc((void ***)ta->Tyz , tr.Txy.y * sizeof(double *));
-    cudaMalloc((void ***)ta->Tyzy, tr.Txy.y * sizeof(double *));
-    cudaMalloc((void ***)ta->Tyzz, tr.Txy.y * sizeof(double *));
-    // 3次元目のポインタをデバイスメモリに割り当て (Z方向)
-    for (int j = 0; j < tr.Txy.y; j++) {
-      cudaMalloc((void ***)ta->Tyz , tr.Txy.z * sizeof(double));
-      cudaMalloc((void ***)ta->Tyzy, tr.Txy.z * sizeof(double));
-      cudaMalloc((void ***)ta->Tyzz, tr.Txy.z * sizeof(double));
-    }
-  }
-
-  // 1次元目のポインタをデバイスメモリに割り当て (X方向)
-  cudaMalloc((void ***)ta->Tzx , tr.Txy.x * sizeof(double **));
-  cudaMalloc((void ***)ta->Tzxz, tr.Txy.x * sizeof(double **));
-  cudaMalloc((void ***)ta->Tzxx, tr.Txy.x * sizeof(double **));
-  // 2次元目のポインタをデバイスメモリに割り当て (Y方向)
-  for (int i = 0; i < tr.Txy.x; i++) {
-    cudaMalloc((void ***)ta->Tzx, tr.Txy.y * sizeof(double *));
-    cudaMalloc((void ***)ta->Tzxz, tr.Txy.y * sizeof(double *));
-    cudaMalloc((void ***)ta->Tzxx, tr.Txy.y * sizeof(double *));
-    // 3次元目のポインタをデバイスメモリに割り当て (Z方向)
-    for (int j = 0; j < tr.Txy.y; j++) {
-      cudaMalloc((void ***)ta->Tzx, tr.Txy.z * sizeof(double));
-      cudaMalloc((void ***)ta->Tzxz, tr.Txy.z * sizeof(double));
-      cudaMalloc((void ***)ta->Tzxx, tr.Txy.z * sizeof(double));
-    }
-  }
-}
-
 void initHostTauArr(TauArr *ta, TauRan tr) {
   int i, j;
   ta->Txy = (double ***)malloc(sizeof(double **) * tr.Txy.x);
@@ -305,70 +201,6 @@ void initHostTauArr(TauArr *ta, TauRan tr) {
       ta->Tzx[i][j] = (double *)malloc(sizeof(double) * tr.Tzx.z);
       ta->Tzxz[i][j] = (double *)malloc(sizeof(double) * tr.Tzx.z);
       ta->Tzxx[i][j] = (double *)malloc(sizeof(double) * tr.Tzx.z);
-    }
-  }
-}
-
-void initDeviceVelArr(VelArr *va, VelRan vr) {
-  int i, j;
-
-  // 1次元目のポインタをデバイスメモリに割り当て (X方向)
-  cudaMalloc((void ***)&va->Vx , vr.Vx.x * sizeof(double **));
-  cudaMalloc((void ***)&va->Vxx, vr.Vx.x * sizeof(double **));
-  cudaMalloc((void ***)&va->Vxy, vr.Vx.x * sizeof(double **));
-  cudaMalloc((void ***)&va->Vxz, vr.Vx.x * sizeof(double **));
-  // 2次元目のポインタをデバイスメモリに割り当て (Y方向)
-  for (i = 0; i < vr.Vx.x; i++) {
-    cudaMalloc((void ***)&va->Vx[i] , vr.Vx.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vxx[i], vr.Vx.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vxy[i], vr.Vx.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vxz[i], vr.Vx.y * sizeof(double *));
-    
-    // 3次元目のポインタをデバイスメモリに割り当て (Z方向)
-    for (j = 0; j < vr.Vx.y; j++) {
-    cudaMalloc((void ***)&va->Vx[i][j] , vr.Vx.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vxx[i][j], vr.Vx.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vxy[i][j], vr.Vx.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vxz[i][j], vr.Vx.z * sizeof(double));
-    }
-  }
-
-  // 1次元目のポインタをデバイスメモリに割り当て (X方向)
-  cudaMalloc((void ***)&va->Vy , (vr.Vy.x + 1) * sizeof(double **));
-  cudaMalloc((void ***)&va->Vyx, (vr.Vy.x + 1) * sizeof(double **));
-  cudaMalloc((void ***)&va->Vyy, (vr.Vy.x + 1) * sizeof(double **));
-  cudaMalloc((void ***)&va->Vyz, (vr.Vy.x + 1) * sizeof(double **));
-  // 2次元目のポインタをデバイスメモリに割り当て (Y方向)
-  for (i = 0; i < vr.Vy.x; i++) {
-    cudaMalloc((void ***)&va->Vy[i] , vr.Vy.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vyx[i], vr.Vy.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vyy[i], vr.Vy.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vyz[i], vr.Vy.y * sizeof(double *));
-    // 3次元目のポインタをデバイスメモリに割り当て (Z方向)
-    for (j = 0; j < vr.Vy.y; j++) {
-    cudaMalloc((void ***)&va->Vy[i][j] , vr.Vy.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vyx[i][j], vr.Vy.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vyy[i][j], vr.Vy.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vyz[i][j], vr.Vy.z * sizeof(double));
-    }
-  }
-  // 1次元目のポインタをデバイスメモリに割り当て (X方向)
-  cudaMalloc((void ***)&va->Vz , vr.Vz.x * sizeof(double **));
-  cudaMalloc((void ***)&va->Vzx, vr.Vz.x * sizeof(double **));
-  cudaMalloc((void ***)&va->Vzy, vr.Vz.x * sizeof(double **));
-  cudaMalloc((void ***)&va->Vzz, vr.Vz.x * sizeof(double **));
-  // 2次元目のポインタをデバイスメモリに割り当て (Y方向)
-  for (i = 0; i < vr.Vz.x; i++) {
-    cudaMalloc((void ***)&va->Vz[i] , vr.Vz.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vzx[i], vr.Vz.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vzy[i], vr.Vz.y * sizeof(double *));
-    cudaMalloc((void ***)&va->Vzz[i], vr.Vz.y * sizeof(double *));
-    // 3次元目のポインタをデバイスメモリに割り当て (Z方向)
-    for (j = 0; j < vr.Vz.y; j++) {
-    cudaMalloc((void ***)&va->Vz[i][j] , vr.Vz.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vzx[i][j], vr.Vz.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vzy[i][j], vr.Vz.z * sizeof(double));
-    cudaMalloc((void ***)&va->Vzz[i][j], vr.Vz.z * sizeof(double));
     }
   }
 }
@@ -425,46 +257,11 @@ void initHostVelArr(VelArr *va, VelRan vr) {
   }
 }
 
-void initDeviceBefAft(BefAft *ba, Range ran) {
-  initDeviceSigArr(&ba->sa, ran.sr);
-  initDeviceTauArr(&ba->ta, ran.tr);
-  initDeviceVelArr(&ba->va, ran.vr);
-}
 
 void initHostBefAft(BefAft *ba, Range ran) {
   initHostSigArr(&ba->sa, ran.sr);
   initHostTauArr(&ba->ta, ran.tr);
   initHostVelArr(&ba->va, ran.vr);
-}
-
-void initDeviceInpalse(Inpaluse *ip, SigRan sr, Pml pml, int mode, int x, int y, int z, double freq) {
-  ip->freq = freq;
-  ip->mode = mode;
-  // 1次元目のポインタをデバイスメモリに割り当て (X方向)
-  cudaMalloc((void ***)&ip->Txx, sr.Txx.x * sizeof(double **));
-  cudaMalloc((void ***)&ip->Tyy, sr.Txx.x * sizeof(double **));
-  cudaMalloc((void ***)&ip->Tzz, sr.Txx.x * sizeof(double **));
-  // 2次元目のポインタをデバイスメモリに割り当て (Y方向)
-  for (int i = 0; i < sr.Txx.x; i++) {
-    cudaMalloc((void ***)&ip->Txx[i], sr.Txx.y * sizeof(double *));
-    cudaMalloc((void ***)&ip->Tyy[i], sr.Txx.y * sizeof(double *));
-    cudaMalloc((void ***)&ip->Tzz[i], sr.Txx.y * sizeof(double *));
-    // 3次元目のポインタをデバイスメモリに割り当て (Z方向)
-    for (int j = 0; j < sr.Txx.y; j++) {
-      cudaMalloc((void ***)&ip->Txx[i][j], sr.Txx.z * sizeof(double));
-      cudaMalloc((void ***)&ip->Tyy[i][j], sr.Txx.z * sizeof(double));
-      cudaMalloc((void ***)&ip->Tzz[i][j], sr.Txx.z * sizeof(double));
-    }
-  }
-  // for (k = 0; k <= sr.Txx.z; k++) {
-  //   for (j = 0; j <= sr.Txx.y; j++) {
-  //     for (i = 0; i <= sr.Txx.x; i++) {
-  //       ip->Txx[i][j][k] = 0.;
-  //       ip->Tyy[i][j][k] = 0.;
-  //       ip->Tzz[i][j][k] = 0.;
-  //     }
-  //   }
-  // }  
 }
 
 void initHostInpalse(Inpaluse *ip, SigRan sr, Pml pml, int mode, int x, int y, int z, double freq) {
@@ -495,71 +292,6 @@ void initHostInpalse(Inpaluse *ip, SigRan sr, Pml pml, int mode, int x, int y, i
   // }  
 }
 
-void initDeviceMedArr(MedArr *ma, SigRan sr) {
-  int i, j;
-  cudaMalloc((void ***)&ma->ramda, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->mu, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->c11, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->rho, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetaxx, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetaxy, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetaxz, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetayx, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetayy, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetayz, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetazx, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetazy, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetazz, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->gamma, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->khi, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->xi11, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetadx, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetady, sizeof(double **) * sr.Txx.x);
-  cudaMalloc((void ***)&ma->zetadz, sizeof(double **) * sr.Txx.x);
-  for (i = 0; i < sr.Txx.x; i++) {
-    cudaMalloc((void ***)&ma->ramda[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->mu[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->c11[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->rho[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetaxx[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetaxy[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetaxz[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetayx[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetayy[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetayz[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetazx[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetazy[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetazz[i], sizeof(double **) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->gamma[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->khi[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->xi11[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetadx[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetady[i], sizeof(double *) * sr.Txx.x);
-    cudaMalloc((void ***)&ma->zetadz[i], sizeof(double *) * sr.Txx.x);
-    for (j = 0; j < sr.Txx.y; j++) {
-      cudaMalloc((void **)&ma->ramda[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->mu[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->c11[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->rho[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetaxx[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetaxy[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetaxz[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetayx[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetayy[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetayz[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetazx[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetazy[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetazz[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->gamma[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->khi[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->xi11[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetadx[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetady[i][j], sizeof(double) * sr.Txx.x);
-      cudaMalloc((void ***)&ma->zetadz[i][j], sizeof(double) * sr.Txx.x);
-    }
-  }
-}
-
 void initHostMedArr(MedArr *ma, SigRan sr) {
   int i, j;
   ma->ramda = (double ***)malloc(sizeof(double **) * sr.Txx.x);
@@ -581,7 +313,7 @@ void initHostMedArr(MedArr *ma, SigRan sr) {
   ma->zetadx = (double ***)malloc(sizeof(double **) * sr.Txx.x);
   ma->zetady = (double ***)malloc(sizeof(double **) * sr.Txx.x);
   ma->zetadz = (double ***)malloc(sizeof(double **) * sr.Txx.x);
-  for (i = 0; i <= sr.Txx.x; i++) {
+  for (i = 0; i < sr.Txx.x; i++) {
     ma->ramda[i] = (double **)malloc(sizeof(double *) * sr.Txx.y);
     ma->mu[i] = (double **)malloc(sizeof(double *) * sr.Txx.y);
     ma->c11[i] = (double **)malloc(sizeof(double *) * sr.Txx.y);
@@ -674,7 +406,6 @@ void initrandom(Coord con_size, Coord *clack, int ratio) {
 
 void initClack(Object *clack, Medium med, Pml *pml, int spx, int spy, int spz, int ranx, int rany, int ranz) {
   clack->med = med;
-  spx = spx + pml->pl1.x - 1, spy = spy + pml->pl1.y - 1, spz = spz + pml->pl1.z - 1;//ok
   initCoord(&clack->sp, spx, spy, spz);
   initCoord(&clack->range, ranx, rany, ranz);
 }
