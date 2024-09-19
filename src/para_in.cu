@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-void para_in(Coord *region,Coord *center,Coord *con_st,Coord *con_size,Coord *clack_st,Coord *clack_size,Coord *out,Inpaluse *ip,int *outNum,int *tmax){
+void para_in(Coord *region,Coord *center,Coord *con_st,Coord *con_size,Coord *clack_st,Coord *clack_size,Coord *out,Impulse *ip,int *outNum,int *tmax){
     //サイズ
     //可変値
     initCoord(region, 10, 10, 10);

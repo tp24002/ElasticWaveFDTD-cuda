@@ -57,8 +57,8 @@ typedef struct {
 } Range;
 
 typedef struct {
-  Coord pl1;
-  Coord pl2;
+  Coord pl1;// min ~ range
+  Coord pl2;// range ~ max
   double ta;
   double fm;
 } Pml;
@@ -147,7 +147,7 @@ typedef struct {
   double freq;
   int mode;
   Coord in;
-} Inpaluse;
+} Impulse;
 
 typedef enum { E_AIR = 0, E_CON, E_STEEL, E_M_END } E_Mednum;
 typedef enum { E_SINE = 100, E_RCOS } E_KIND_OF_IP;

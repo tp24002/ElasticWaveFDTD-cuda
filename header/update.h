@@ -9,12 +9,12 @@ __global__ void TzzUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Coord
 __global__ void ZeroT_XY(BefAft *aft, Coord ranmax, char check);
 __global__ void ZeroT_YZ(BefAft *aft, Coord ranmax, char check);
 __global__ void ZeroT_ZX(BefAft *aft, Coord ranmax, char check);
-__global__ void DirectionalAdd(BefAft *aft, Inpaluse *ip, Coord ranmax, char check);
-void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads);
-void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads);
-void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads);
+__global__ void DirectionalAdd(BefAft *aft, Impulse *ip, Coord ranmax, char check);
+void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
+void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
+void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
 
-void Sig(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads);
+void Sig(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
 
 // せん断応力
 

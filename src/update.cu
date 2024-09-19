@@ -9,7 +9,7 @@
 
 #include "../header/insert.h"
 #include "../header/init.h"
-#include "../header/extradition.h"
+#include "../header/memory.h"
 
 // 垂直応力
 
@@ -185,7 +185,7 @@ __global__ void ZeroT_ZX(BefAft *aft, Coord ranmax, char check) {
   }
 }
 // 全方向加算
-__global__ void DirectionalAdd(BefAft *aft, Inpaluse *ip, Coord ranmax, char check) {
+__global__ void DirectionalAdd(BefAft *aft, Impulse *ip, Coord ranmax, char check) {
   // スレッドインデックスの計算
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -209,19 +209,19 @@ __global__ void DirectionalAdd(BefAft *aft, Inpaluse *ip, Coord ranmax, char che
   }
 }
 // Txxクラス的な(Blocks大丈夫かな？)
-void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads) {
+void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads) {
   char check = 'X';
   Coord ranmax;
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("txx1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("txx2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("txx3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("txx4\n");
-  // copyInpaluseToDevice(ip_d, &ip_h, ran);
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
+  copyImpulseHostToDevice(&ip_h, ip_d, ran);
 
   int Txximax = ran.sr.Txx.x, Txxjmax = ran.sr.Txx.y, Txxkmax = ran.sr.Txx.z;
   initCoord(&ranmax, Txximax, Txxjmax, Txxkmax);
@@ -247,26 +247,26 @@ void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
   cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   if (err != cudaSuccess) {
-      printf("CUDA error: %s\n", cudaGetErrorString(err));
+      printf("CUDA kernel error: %s\n", cudaGetErrorString(err));
   }
   cudaDeviceSynchronize();
     // copyBefAftToHost(aft_h, aft_d, ran);
   // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Tyyクラス的な(Blocks大丈夫かな？)
-void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads) {
+void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads) {
   char check = 'Y';
   Coord ranmax;
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("tyy1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("tyy2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("tyy3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("tyy4\n");
-  // copyInpaluseToDevice(ip_d, &ip_h, ran);
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
+  copyImpulseHostToDevice(&ip_h, ip_d, ran);
 
   int Tyyimax = ran.sr.Tyy.x, Tyyjmax = ran.sr.Tyy.y, Tyykmax = ran.sr.Tyy.z;
   initCoord(&ranmax, Tyyimax, Tyyjmax, Tyykmax);
@@ -292,7 +292,7 @@ void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
   cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   if (err != cudaSuccess) {
-      printf("CUDA error: %s\n", cudaGetErrorString(err));
+      printf("CUDA kernel error: %s\n", cudaGetErrorString(err));
   }
   cudaDeviceSynchronize();
   // データ転送device to host
@@ -300,19 +300,19 @@ void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // Tzzクラス的な(Blocks大丈夫かな？)
-void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads) {
+void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads) {
   char check = 'Z';
   Coord ranmax;
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("tzz1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("tzz2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("tzz3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("tzz4\n");
-  // copyInpaluseToDevice(ip_d, &ip_h, ran);
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
+  copyImpulseHostToDevice(&ip_h, ip_d, ran);
 
   int Tzzimax = ran.sr.Tzz.x, Tzzjmax = ran.sr.Tzz.y, Tzzkmax = ran.sr.Tzz.z;
   initCoord(&ranmax, Tzzimax, Tzzjmax, Tzzkmax);
@@ -337,7 +337,7 @@ void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ranmax, check);
   cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   if (err != cudaSuccess) {
-      printf("CUDA error: %s\n", cudaGetErrorString(err));
+      printf("CUDA kernel error: %s\n", cudaGetErrorString(err));
   }
   cudaDeviceSynchronize(); 
   // データ転送device to host
@@ -345,7 +345,7 @@ void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
   // copyBefAftToHost(bef_h, bef_d, ran);
 }
 // 垂直応力計算(main呼び出し関数)
-void Sig(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Inpaluse ip_h, Inpaluse *ip_d, int t, Coord threads) {
+void Sig(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads) {
   Txx(aft_h, bef_h, aft_d, bef_d, ma_h, ma_d, dif_h, dif_d, ran, ip_h, ip_d, t, threads);
   Tyy(aft_h, bef_h, aft_d, bef_d, ma_h, ma_d, dif_h, dif_d, ran, ip_h, ip_d, t, threads);
   Tzz(aft_h, bef_h, aft_d, bef_d, ma_h, ma_d, dif_h, dif_d, ran, ip_h, ip_d, t, threads);
@@ -485,14 +485,14 @@ __global__ void DirectionalAddT(BefAft *aft, Coord Tmax, char check) {
 void Txy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
 
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("txy1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("txy2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("txy3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("txy4\n");
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
 
   int Txyimax = ran.tr.Txy.x, Txyjmax = ran.tr.Txy.y, Txykmax = ran.tr.Txy.z;
 
@@ -516,14 +516,14 @@ void Txy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
 void Tyz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
   
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("tyz1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("tyz2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("tyz3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("tyz4\n");
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
 
   int Tyzimax = ran.tr.Tyz.x, Tyzjmax = ran.tr.Tyz.y, Tyzkmax = ran.tr.Tyz.z;
 
@@ -547,14 +547,14 @@ void Tyz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h
 void Tzx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
   
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("tzx1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("tzx2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("tzx3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("tzx4\n");
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
 
   int Tzximax = ran.tr.Tzx.x, Tzxjmax = ran.tr.Tzx.y, Tzxkmax = ran.tr.Tzx.z;
 
@@ -756,13 +756,13 @@ void Vx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
   // pml->ma,dif
   
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
   // printf("vx1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
   // printf("vx2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
   // printf("vx3\n");
-  copyDiffToDevice(dif_d, &dif_h);
+  copyDiffHostToDevice(&dif_h, dif_d);
   // printf("vx4\n");
   
   int Vximax = ran.vr.Vx.x, Vxjmax = ran.vr.Vx.y, Vxkmax = ran.vr.Vx.z;
@@ -792,14 +792,14 @@ void Vx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
 void Vy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
   
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("vy1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("vy2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("vy3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("vy4\n");
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
 
   int Vyimax = ran.vr.Vy.x, Vyjmax = ran.vr.Vy.y, Vykmax = ran.vr.Vy.z;
 
@@ -828,14 +828,14 @@ void Vy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h,
 void Vz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads) {
 
   // host->deviceデータ転送
-  copyBefAftToDevice(aft_d, aft_h, ran);
-  // printf("vz1\n");
-  copyBefAftToDevice(bef_d, bef_h, ran);
-  // printf("vz2\n");
-  copyMedArrToDevice(ma_d, &ma_h, ran);
-  // printf("vz3\n");
-  copyDiffToDevice(dif_d, &dif_h);
-  // printf("vz4\n");
+  copyBefAftHostToDevice(aft_h, aft_d, ran);
+  // printf("vx1\n");
+  copyBefAftHostToDevice(bef_h, bef_h, ran);
+  // printf("vx2\n");
+  copyMedArrHostToDevice(&ma_h, ma_d, ran);
+  // printf("vx3\n");
+  copyDiffHostToDevice(&dif_h, dif_d);
+  // printf("vx4\n");
 
   int Vzimax = ran.vr.Vz.x, Vzjmax = ran.vr.Vz.y, Vzkmax = ran.vr.Vz.z;
 
