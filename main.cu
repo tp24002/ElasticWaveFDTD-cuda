@@ -5,7 +5,6 @@
 #include <time.h>
 
 #include "./header/init.h"
-#include "./header/insert.h"
 #include "./header/struct.h"
 #include "./header/update.h"
 #include "./header/parameter.h"
@@ -14,31 +13,34 @@
 void progressBar(int now, int max);
 
 int main(void) {
-  // 宣言
-  Medium med[E_M_END];
-  Object *con;
-  Object *clack;
-  Range ran;
-  Pml *pml;
-  //host data(cpu)
-  Diff *dif_h, *dif_d;
-  MedArr *ma_h, *ma_d;
-  BefAft *bef_h, *bef_d;
-  BefAft *aft_h, *aft_d;
-  Impulse *ip_h, *ip_d;
-  int tmax;
+  // 静的変数
+  Medium *med_d;
+  Object *air_d;
+  Object *con_d;
+  Object *clack_d;
+  Range ran_h, *ran_d;
+  Pml *pml_d;
+  Diff *dif_d;
 
+  // 動的変数
+  MedArr *ma_d;
+  BefAft *bef_d;
+  BefAft *aft_d;
+  Impulse *ip_d;
+  AccCoord *acc_h, *acc_d;
+  int tmax_h, *tmax_d;
+  int t_h, *t_d;
+  // int RegionArea;
 
-  // Coord out1,out2,out3,out4;
   FILE *fp1;
   // FILE *fp1,*fp2,*fp3,*fp4;
-  // char fn1[256];
+  char fn1[256];
   // char fn1[256],fn2[256],fn3[256],fn4[256];
   // int tmp = 0;
 
   Coord out[16];
   // Coord center;
-  int outNum = 10;
+  int outNum_h, *outNum_d;
   // // int make_models; // 作成するモデルの数
   // int model_count = 0; // いくつ目のモデルを作成中か
   // int ratio;
@@ -46,59 +48,47 @@ int main(void) {
   // // int max_ClackPatern; // 欠陥を配置できる最大のパターン数
   // int clack_count; // 割合による欠陥数
   Coord threads;
-  Coord_acc **Acc_h, **Acc_d;
 
   // スレッド数
-  initCoord(&threads, 4, 4, 8);
-  // ran = (Range *)malloc(sizeof(Range));
-  pml = (Pml *)malloc(sizeof(Pml));
-  dif_h = (Diff *)malloc(sizeof(Diff));
-  con = (Object *)malloc(sizeof(Object));
-  clack = (Object *)malloc(sizeof(Object));
-  ma_h = (MedArr *)malloc(sizeof(MedArr));
+  initHostCoord(&threads, 4, 4, 8);
 
-  // データ格納
-  StaticVariable(&ran, pml, dif_h, con, clack, med, ma_h, &tmax);
-
-  allocateHostBefAft(&bef_h, ran);
-  allocateHostBefAft(&aft_h, ran);
-  zeroPadding(bef_h, ran);
-  zeroPadding(aft_h, ran);
-  printf("aaa\n");
-  printf("a:%f\n", bef_h->sa.Txx[73][73][73]);
-  printf("nono\n");
-
-  allocateHostMedArr(&ma_h, ran);
-  printf("nono\n");
-  allocateHostImpulse(&ip_h, ran);
-  DynamicVariable(ma_h, ip_h, ran, med, *con, *clack, *pml, *dif_h, tmax);
+  // デバイス変数
+  // 静的変数メモリ確保
+  cudaMalloc((void**)&med_d  , E_M_END * sizeof(Medium));
+  cudaMalloc((void**)&pml_d  , sizeof(Pml));
+  cudaMalloc((void**)&ran_d  , sizeof(Range));
+  cudaMalloc((void**)&dif_d  , sizeof(Diff));
+  cudaMalloc((void**)&air_d  , sizeof(Object));
+  cudaMalloc((void**)&con_d  , sizeof(Object));
+  cudaMalloc((void**)&clack_d, sizeof(Object));
+  cudaMalloc((void**)&ma_d   , sizeof(MedArr));
+  cudaMalloc((void**)&tmax_d, sizeof(int));
+  cudaMalloc((void**)&outNum_d, sizeof(int));
   
-  // 出力
-  printf("time:%d\n", tmax);
-  printf("range:%d,%d,%d(in pml)\n", ran.sr.Txx.x, ran.sr.Txx.y, ran.sr.Txx.z);
-  printf("pml:%d,%d,%d\n", pml->pl1.x, pml->pl1.y, pml->pl1.z);
-  printf("dif_xyz:%f,%f,%f\n", dif_h->dx, dif_h->dy, dif_h->dz);
-  printf("dif_time:%f\n", dif_h->dt);
-  printf("in:%d,%d,%d\n", ip_h->in.x, ip_h->in.y, ip_h->in.z);
-  if(ip_h->mode == E_SINE){
-    printf("sin:%f\n", ip_h->freq);
-  } else if(ip_h->mode == E_RCOS){
-    printf("cos:%f\n", ip_h->freq);
-  }
+  // データ格納
+  StaticVariable<<<1,1>>>(med_d, pml_d, ran_d, dif_d, air_d, con_d, clack_d, ma_d, tmax_d, outNum_d);
+  // Range デバイス変数->ホスト変数
+  cudaMemcpy(&ran_h, ran_d, sizeof(Range), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&tmax_h, tmax_d, sizeof(int), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&outNum_h, outNum_d, sizeof(int), cudaMemcpyDeviceToHost);
+  
 
-  // 関数化推奨
-  // 加速度メモリ確保
-  Acc_h = (Coord_acc **)malloc(sizeof(Coord_acc *) * outNum);
-  for (int i = 0; i < outNum; i++) {
-    Acc_h[i] = (Coord_acc *)malloc(tmax * sizeof(Coord_acc));
-  }
-  cudaMalloc((void **)&Acc_d, outNum * sizeof(Coord_acc *));
-  for (int i = 0; i < outNum; i++) {
-    Coord_acc *temp_d;
-    cudaMalloc((void **)&temp_d, tmax * sizeof(Coord_acc));
-    cudaMemcpy(Acc_h[i], temp_d, tmax * sizeof(Coord_acc), cudaMemcpyHostToDevice);
-    cudaMemcpy(&Acc_d[i], &temp_d, sizeof(Coord_acc *), cudaMemcpyHostToDevice);
-  }
+  // 動的変数メモリ確保
+  bef_d = allocateDeviceBefAft(&ran_h);
+  aft_d = allocateDeviceBefAft(&ran_h);
+  ma_d  = allocateDeviceMedArr(&ran_h);
+  ip_d  = allocateDeviceImpulse(&ran_h);
+  printf("00000\n");
+  
+  allocateDeviceAccCoord(&acc_d, tmax_h, outNum_h);
+  
+  DynamicVariable<<<1,1>>>(bef_d, aft_d, acc_d, ma_d, ip_d, ran_d, med_d, air_d, con_d, clack_d, pml_d, dif_d, tmax_d, outNum_d);
+
+  allocateHostAccCoord(&acc_h, tmax_h, outNum_h);
+  // 出力
+  printf("time:%d\n", tmax_h);
+  printf("range:%d,%d,%d(in pml)\n", ran_h.sr.Txx.x, ran_h.sr.Txx.y, ran_h.sr.Txx.z);
+
   ///////////clack
   // ratio = 10;
   // max_Patern = con_size.x * con_size.y * con_size.z;
@@ -126,50 +116,48 @@ int main(void) {
   // printf("%.*s\n", (int) sizeof fn1, fn1);
   // fp1 = fopen(fn1, "wb");
 
-  // device構造体本体のメモリ確保
-  cudaMalloc((void **)&aft_d, sizeof(BefAft));
-  cudaMalloc((void **)&bef_d, sizeof(BefAft));
-  cudaMalloc((void **)&ma_d, sizeof(MedArr));
-  cudaMalloc((void **)&dif_d, sizeof(Diff));
-  cudaMalloc((void **)&ip_d, sizeof(Impulse));
-  // device構造体中身(メンバ)のメモリ確保関数
-  allocateDeviceBefAft(&aft_d, ran);
-  allocateDeviceBefAft(&bef_d, ran);
-  printf("aloocate BefAft ok\n");
-  allocateDeviceMedArr(&ma_d, ran);
-  printf("aloocate MedArr ok\n");
-  allocateDeviceImpulse(&ip_d, ran);
-  printf("aloocate Impulse ok\n");
   // double test;
-  for (int t = 0; t < tmax; t++) {
-
-    
+  for (t_h = 0; t_h < tmax_h; t_h++) {
+    cudaMemcpy(&t_d, &t_h, sizeof(int), cudaMemcpyHostToDevice);
+    // printf("host to device t_h,t_d\n");
+    insertImpulse<<<1,1>>>(ip_d, dif_d, t_d, ran_d);
+    // printf("insert Impluse\n");
     // printf("%f\n",ip_h.Tzz[ip_h.in.x][ip_h.in.y][ip_h.in.z]);
 
     // printf("%f\n",ip_d.freq);
-    Vel(aft_h, bef_h, aft_d, bef_d, *ma_h, ma_d, *dif_h, dif_d, ran, threads);
-    Sig(aft_h, bef_h, aft_d, bef_d, *ma_h, ma_d, *dif_h, dif_d, ran, *ip_h, ip_d, t, threads);
-    Tau(aft_h, bef_h, aft_d, bef_d, *ma_h, ma_d, *dif_h, dif_d, ran, threads);
+    Vel<<<1,1>>>(aft_d, bef_d, ma_d, dif_d, ran_d, threads);
+    // printf("Vel OK\n");
+    Sig<<<1,1>>>(aft_d, bef_d, ma_d, dif_d, ran_d, ip_d, threads);
+    // printf("Sig OK\n");
+    Tau<<<1,1>>>(aft_d, bef_d, ma_d, dif_d, ran_d, threads);
+    // printf("Tau OK\n");
 
+    // Vel(aft_d, bef_d, ma_d, dif_d, ran, threads);
+    // Sig(aft_d, bef_d, ma_d, dif_d, ran, ip_d, threads);
+    // Sig(aft_d, bef_d, ma_d, dif_d, ran, threads);
 
     // 加速度算出＆書き込み
-    Acceleration<<<1, 1>>>(Acc_d, aft_d, bef_d, *dif_h, out, outNum, t);
-
-    // swapBefAft<<<1, 1>>>(&aft_d, &bef_d, ran);
-    // progressBar(t, tmax);
+    AccelerationCalculation<<<1, 1>>>(acc_d, aft_d, bef_d, dif_d, out, ran_d, outNum_d, t_d, tmax_d);
+    // printf("acc calcu\n");
+    swapBefAft<<<1, 1>>>(aft_d, bef_d, ran_d, threads);
+    // printf("swap befaft\n");
+    // progressBar(t_h, tmax_h);
   }
-
-  cudaError_t err = cudaMemcpy(Acc_d, Acc_h, outNum * sizeof(Coord_acc *), cudaMemcpyDeviceToHost);
-  if (err != cudaSuccess) {
-    printf("acc d to h Error: %s\n", cudaGetErrorString(err));
-    return;
-  }
-  for (int j = 0; j < tmax; j++) {
-    for (int i = 0; i < outNum; i++) {
-      fprintf(fp1,"%le,%le,%le,", Acc_h[i][j].x, Acc_h[i][j].y, Acc_h[i][j].z);
+  printf("loop end\n");
+  // cudaMemcpy(&acc_h, acc_d, outNum_h * sizeof(AccCoord), cudaMemcpyDeviceToHost);
+  AccCoordDeviceToHost(acc_d, acc_h, outNum_h, tmax_h);
+  printf("acc device to host\n");
+  int idx;
+  int ratio = 10;
+  int model_count = 0;
+  sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
+  fp1 = fopen(fn1, "w");
+  for (int j = 0; j < tmax_h; j++) {
+    for (int i = 0; i < outNum_h; i++) {
+      idx = j * tmax_h + i;
+      fprintf(fp1,"%le,%le,%le,", *(acc_h->x + idx), *(acc_h->y + idx), *(acc_h->z + idx));
     }
     fprintf(fp1, "\n");
-    progressBar(j, tmax);
   }
   fclose(fp1);
   printf("loop end.\n");

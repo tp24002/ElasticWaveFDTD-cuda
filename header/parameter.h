@@ -1,11 +1,12 @@
 #pragma once
 #include "./struct.h"
 
-
-void StaticVariable(Range *ran, Pml *pml, Diff *dif, Object *con, Object *clack, Medium *med, MedArr *ma, int *tmax);
-void DynamicVariable(MedArr *ma, Impulse *ip, Range ran, Medium *med, Object con, Object clack, Pml pml, Diff dif, int tmax);
-void insertAir(MedArr *ma, SigRan sr, Medium air);
-void insertConcrete(MedArr *ma, Object con);
-void insertClack(MedArr *ma, Object clack);
-void insertPml(MedArr *ma, SigRan sr, Pml pml);
-void insertImpulse(Impulse *ip, Diff dif, int tmax);
+__global__ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, Object *con, Object *clack, MedArr *ma, int *tmax, int *outNum);
+__global__ void DynamicVariable(BefAft *bef, BefAft *aft, AccCoord *acc, MedArr *ma, Impulse *ip, Range *ran, Medium *med, Object *air, Object *con, Object *clack, Pml *pml, Diff *dif, int *tmax, int *outNum);
+__device__ void insertBefAft(BefAft *ba, Range *ran);
+__device__ void insertAccCoord(AccCoord *acc, int *outNum, int *tmax);
+__device__ void insertAir(MedArr *ma, Object *air, Range *ran);
+__device__ void insertConcrete(MedArr *ma, Object *con, Range *ran);
+__device__ void insertClack(MedArr *ma, Object *clack, Range *ran);
+__device__ void insertPml(MedArr *ma, Pml *pml, Range *ran);
+__global__ void insertImpulse(Impulse *ip, Diff *dif, int *t, Range *ran);

@@ -10,11 +10,11 @@ __global__ void ZeroT_XY(BefAft *aft, Coord ranmax, char check);
 __global__ void ZeroT_YZ(BefAft *aft, Coord ranmax, char check);
 __global__ void ZeroT_ZX(BefAft *aft, Coord ranmax, char check);
 __global__ void DirectionalAdd(BefAft *aft, Impulse *ip, Coord ranmax, char check);
-void Txx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
-void Tyy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
-void Tzz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
+__device__ void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Impulse *ip_d, Coord threads);
+__device__ void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Impulse *ip_d, Coord threads);
+__device__ void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Impulse *ip_d, Coord threads);
 
-void Sig(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Impulse ip_h, Impulse *ip_d, int t, Coord threads);
+__global__ void Sig(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Impulse *ip_d, Coord threads);
 
 // せん断応力
 
@@ -25,11 +25,11 @@ __global__ void ZeroTxy(BefAft *aft, Coord Tmax);
 __global__ void ZeroTyz(BefAft *aft, Coord Tmax);
 __global__ void ZeroTzx(BefAft *aft, Coord Tmax);
 __global__ void DirectionalAddT(BefAft *aft, Coord Tmax, char check);
-void Txy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
-void Tyz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
-void Tzx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
+__device__ void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
+__device__ void Tyz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
+__device__ void Tzx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
 
-void Tau(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
+__global__ void Tau(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
 
 // 粒子速度
 
@@ -43,12 +43,23 @@ __global__ void ZeroVy_YZ(BefAft *aft, Coord Vmax);
 __global__ void ZeroVz_ZX(BefAft *aft, Coord Vmax);
 __global__ void ZeroVz_ZY(BefAft *aft, Coord Vmax);
 __global__ void DirectionalAddV(BefAft *aft, Coord Vmax, char check);
-void Vx(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
-void Vy(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
-void Vz(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
+__device__ void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
+__device__ void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
+__device__ void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
 
-void Vel(BefAft *aft_h, BefAft *bef_h, BefAft *aft_d, BefAft *bef_d, MedArr ma_h, MedArr *ma_d, Diff dif_h, Diff *dif_d, Range ran, Coord threads);
+__global__ void Vel(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
 
 
-__global__ void Acceleration(Coord_acc **Acc,BefAft *aft, BefAft *bef, Diff dif, Coord *out,int outnum, int t);
-__global__ void swapBefAft(BefAft *aft, BefAft *bef, Range ran);
+__global__ void AccelerationCalculation(AccCoord *Acc, BefAft *aft, BefAft *bef, Diff *dif, Coord *out, Range *ran, int *outNum, int *t, int *tmax);
+
+
+__global__ void swapTxx(SigArr *aftSa, SigArr *befSa, Range *ran);
+__global__ void swapTyy(SigArr *aftSa, SigArr *befSa, Range *ran);
+__global__ void swapTzz(SigArr *aftSa, SigArr *befSa, Range *ran);
+__global__ void swapTxy(TauArr *aftTa, TauArr *befTa, Range *ran);
+__global__ void swapTyz(TauArr *aftTa, TauArr *befTa, Range *ran);
+__global__ void swapTzx(TauArr *aftTa, TauArr *befTa, Range *ran);
+__global__ void swapVx(VelArr *aftVa, VelArr *befVa, Range *ran);
+__global__ void swapVy(VelArr *aftVa, VelArr *befVa, Range *ran);
+__global__ void swapVz(VelArr *aftVa, VelArr *befVa, Range *ran);
+__global__ void swapBefAft(BefAft *aft, BefAft *bef, Range *ran, Coord threads);
