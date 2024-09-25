@@ -1010,11 +1010,12 @@ __global__ void Vel(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Ran
   Vz(aft_d, bef_d, ma_d, dif_d, ran, threads);
 }
 
-__global__ void AccelerationCalculation(AccCoord *Acc, BefAft *aft, BefAft *bef, Diff *dif, Coord *out, Range *ran, int *outNum, int *t, int *tmax) {
+__global__ void AccelerationCalculation(AccCoord *Acc, BefAft *aft, BefAft *bef, Diff *dif, Coord *out, Range *ran, int *outNum) {
+  printf("oooooooooooooooooooooo\n");
   int i = blockIdx.x * blockDim.x + threadIdx.x; // スレッドインデックスの計算
 
   int ymax = ran->sr.Txx.y, zmax = ran->sr.Txx.z;
-
+  
   if (i < *outNum) {
     int x = out[i].x;
     int y = out[i].y;
@@ -1026,14 +1027,14 @@ __global__ void AccelerationCalculation(AccCoord *Acc, BefAft *aft, BefAft *bef,
     int idxZ =       x * (ymax * zmax) +       y * zmax + (z - 1);
     int idx  =       x * (ymax * zmax) +       y * zmax + z;
 
-    *(Acc->x + i * *tmax + *t) = ((*(aft->va.Vx + idxX) - *(bef->va.Vx + idxX)) / dif->dt +
-                                (*(aft->va.Vx + idx) - *(bef->va.Vx + idx)) / dif->dt) / 2;
+    Acc[i].x = ((*(aft->va.Vx + idxX) - *(bef->va.Vx + idxX)) / dif->dt + (*(aft->va.Vx + idx) - *(bef->va.Vx + idx)) / dif->dt) / 2;
 
-    *(Acc->y + i * *tmax + *t) = ((*(aft->va.Vy + idxY) - *(bef->va.Vy + idxY)) / dif->dt +
+    Acc[i].y = ((*(aft->va.Vy + idxY) - *(bef->va.Vy + idxY)) / dif->dt +
                                 (*(aft->va.Vy + idx) - *(bef->va.Vy + idx)) / dif->dt) / 2;
 
-    *(Acc->z + i * *tmax + *t) = ((*(aft->va.Vz + idxZ) - *(bef->va.Vz + idxZ)) / dif->dt +
+    Acc[i].z = ((*(aft->va.Vz + idxZ) - *(bef->va.Vz + idxZ)) / dif->dt +
                                 (*(aft->va.Vz + idx) - *(bef->va.Vz + idx)) / dif->dt) / 2;
+    printf("%d:%f,%f,%f\n", i, Acc[i].x, Acc[i].y, Acc[i].z);
   }
 }
 

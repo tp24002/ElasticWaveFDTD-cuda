@@ -7,9 +7,9 @@ typedef struct {
 } Coord;
 
 typedef struct {
-  double *x;
-  double *y;
-  double *z;
+  double x;
+  double y;
+  double z;
 } AccCoord;
 
 typedef struct {

@@ -23,9 +23,8 @@ __global__ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Obj
     Coord clack_ran;
     initDeviceCoord(&clack_start, 3, 3, 3);
     initDeviceCoord(&clack_ran, 1, 1, 1);
-    *tmax = 32768;
-    *outNum = 10;
-
+    *tmax = 2;
+    *outNum = 2;
 
     // med
     initMedium<<<1,1>>>(med);
@@ -59,14 +58,13 @@ __global__ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Obj
 
 // 動的変数(静的変数によって大きさが変わる変数)
 // メモリ確保後に実行する必要がある
-__global__ void DynamicVariable(BefAft *bef, BefAft *aft, AccCoord *acc, MedArr *ma, Impulse *ip, Range *ran, Medium *med, Object *air, Object *con, Object *clack, Pml *pml, Diff *dif, int *tmax, int *outNum) {
+__global__ void DynamicVariable(BefAft *bef, BefAft *aft, AccCoord *acc, MedArr *ma, Impulse *ip, Range *ran, Medium *med, Object *air, Object *con, Object *clack, Pml *pml, Diff *dif, Coord *out, int *outNum) {
   
   // befaft
   insertBefAft(bef, ran);
   insertBefAft(aft, ran);
   // acc
-  printf("000\n");
-  insertAccCoord(acc, outNum, tmax);
+  insertAccCoord(acc, outNum);
   // ma
   insertAir(ma, air, ran);
   insertConcrete(ma, con, ran);
@@ -76,6 +74,9 @@ __global__ void DynamicVariable(BefAft *bef, BefAft *aft, AccCoord *acc, MedArr 
   ip->freq = 2.0e6;
   ip->mode = E_RCOS;
   initDeviceCoord(&ip->in, 10, 10, 10);
+
+  initDeviceCoord(&out[0], 3, 3, 3);
+  initDeviceCoord(&out[1], 2, 4, 3);
 }
 
 __device__ void insertBefAft(BefAft *ba, Range *ran) {
@@ -134,16 +135,13 @@ __device__ void insertBefAft(BefAft *ba, Range *ran) {
   memset(ba->va.Vzz, 0, sizeof(double) * vz_x * vz_y * vz_z);
 }
 
-__device__ void insertAccCoord(AccCoord *acc, int *outNum, int *tmax) {
-  // Range構造体からサイズを取得
-  int size_x = *outNum * *tmax;
-  int size_y = *outNum * *tmax;
-  int size_z = *outNum * *tmax;
-
+__device__ void insertAccCoord(AccCoord *acc, int *outNum) {
   // 0で初期化
-  memset(acc->x, 0, sizeof(double) * size_x);
-  memset(acc->y, 0, sizeof(double) * size_y);
-  memset(acc->z, 0, sizeof(double) * size_z);
+  for(int i = 0; i < *outNum; i++) {
+    acc[i].x = 0;
+    acc[i].y = 0;
+    acc[i].z = 0;
+  }
 }
 
 __device__ void insertAir(MedArr *ma, Object *air, Range *ran) {

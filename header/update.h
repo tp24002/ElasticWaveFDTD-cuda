@@ -50,7 +50,7 @@ __device__ void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Rang
 __global__ void Vel(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran, Coord threads);
 
 
-__global__ void AccelerationCalculation(AccCoord *Acc, BefAft *aft, BefAft *bef, Diff *dif, Coord *out, Range *ran, int *outNum, int *t, int *tmax);
+__global__ void AccelerationCalculation(AccCoord *Acc, BefAft *aft, BefAft *bef, Diff *dif, Coord *out, Range *ran, int *outNum);
 
 
 __global__ void swapTxx(SigArr *aftSa, SigArr *befSa, Range *ran);

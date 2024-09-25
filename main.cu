@@ -38,7 +38,7 @@ int main(void) {
   // char fn1[256],fn2[256],fn3[256],fn4[256];
   // int tmp = 0;
 
-  Coord out[16];
+  Coord *out;
   // Coord center;
   int outNum_h, *outNum_d;
   // // int make_models; // 作成するモデルの数
@@ -64,6 +64,9 @@ int main(void) {
   cudaMalloc((void**)&ma_d   , sizeof(MedArr));
   cudaMalloc((void**)&tmax_d, sizeof(int));
   cudaMalloc((void**)&outNum_d, sizeof(int));
+
+
+
   
   // データ格納
   StaticVariable<<<1,1>>>(med_d, pml_d, ran_d, dif_d, air_d, con_d, clack_d, ma_d, tmax_d, outNum_d);
@@ -72,19 +75,29 @@ int main(void) {
   cudaMemcpy(&tmax_h, tmax_d, sizeof(int), cudaMemcpyDeviceToHost);
   cudaMemcpy(&outNum_h, outNum_d, sizeof(int), cudaMemcpyDeviceToHost);
   
+  // 動的変数デバイスメモリ確保
+  // cudaMalloc(&bef_d, sizeof(BefAft));
+  // cudaMalloc(&aft_d, sizeof(BefAft));
+  // cudaMalloc(&ma_d, sizeof(MedArr));
+  // cudaMalloc(&ip_d, sizeof(Impulse));
+  // cudaMalloc(&acc_d, outNum_h * sizeof(AccCoord));
+  cudaMalloc((void**)&out, outNum_h * sizeof(Coord));
 
-  // 動的変数メモリ確保
+
+  // 動的変数デバイスメモリ確保
   bef_d = allocateDeviceBefAft(&ran_h);
   aft_d = allocateDeviceBefAft(&ran_h);
-  ma_d  = allocateDeviceMedArr(&ran_h);
-  ip_d  = allocateDeviceImpulse(&ran_h);
-  printf("00000\n");
+  ma_d = allocateDeviceMedArr(&ran_h);
+  ip_d = allocateDeviceImpulse(&ran_h);
+  acc_d = allocateDeviceAccCoord(outNum_h);
   
-  allocateDeviceAccCoord(&acc_d, tmax_h, outNum_h);
   
-  DynamicVariable<<<1,1>>>(bef_d, aft_d, acc_d, ma_d, ip_d, ran_d, med_d, air_d, con_d, clack_d, pml_d, dif_d, tmax_d, outNum_d);
 
-  allocateHostAccCoord(&acc_h, tmax_h, outNum_h);
+  DynamicVariable<<<1,1>>>(bef_d, aft_d, acc_d, ma_d, ip_d, ran_d, med_d, air_d, con_d, clack_d, pml_d, dif_d, out, outNum_d);
+
+  // 動的変数ホストメモリ確保
+  acc_h = allocateHostAccCoord(outNum_h);
+
   // 出力
   printf("time:%d\n", tmax_h);
   printf("range:%d,%d,%d(in pml)\n", ran_h.sr.Txx.x, ran_h.sr.Txx.y, ran_h.sr.Txx.z);
@@ -117,6 +130,14 @@ int main(void) {
   // fp1 = fopen(fn1, "wb");
 
   // double test;
+  int ratio = 10;
+  int model_count = 0;
+  sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
+  fp1 = fopen(fn1, "w");
+  dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
+  dim3 AccBlocks((outNum_h - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (outNum_h - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (outNum_h + threadsPerBlock.z - 1)     / threadsPerBlock.z);
   for (t_h = 0; t_h < tmax_h; t_h++) {
     cudaMemcpy(&t_d, &t_h, sizeof(int), cudaMemcpyHostToDevice);
     // printf("host to device t_h,t_d\n");
@@ -132,35 +153,24 @@ int main(void) {
     Tau<<<1,1>>>(aft_d, bef_d, ma_d, dif_d, ran_d, threads);
     // printf("Tau OK\n");
 
-    // Vel(aft_d, bef_d, ma_d, dif_d, ran, threads);
-    // Sig(aft_d, bef_d, ma_d, dif_d, ran, ip_d, threads);
-    // Sig(aft_d, bef_d, ma_d, dif_d, ran, threads);
-
     // 加速度算出＆書き込み
-    AccelerationCalculation<<<1, 1>>>(acc_d, aft_d, bef_d, dif_d, out, ran_d, outNum_d, t_d, tmax_d);
+    AccelerationCalculation<<<AccBlocks, threadsPerBlock>>>(acc_d, aft_d, bef_d, dif_d, out, ran_d, outNum_d);
+    printf("Tau OK\n");
+
+    AccCoordDeviceToHost(acc_d, acc_h, outNum_h);
+
+    for(int j = 0; j < outNum_h; j++){
+      fprintf(fp1,"%le,%le,%le,", acc_h[j].x, acc_h[j].y, acc_h[j].z);
+    }
+    fprintf(fp1, "\n");
+
     // printf("acc calcu\n");
     swapBefAft<<<1, 1>>>(aft_d, bef_d, ran_d, threads);
     // printf("swap befaft\n");
     // progressBar(t_h, tmax_h);
   }
-  printf("loop end\n");
-  // cudaMemcpy(&acc_h, acc_d, outNum_h * sizeof(AccCoord), cudaMemcpyDeviceToHost);
-  AccCoordDeviceToHost(acc_d, acc_h, outNum_h, tmax_h);
-  printf("acc device to host\n");
-  int idx;
-  int ratio = 10;
-  int model_count = 0;
-  sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
-  fp1 = fopen(fn1, "w");
-  for (int j = 0; j < tmax_h; j++) {
-    for (int i = 0; i < outNum_h; i++) {
-      idx = j * tmax_h + i;
-      fprintf(fp1,"%le,%le,%le,", *(acc_h->x + idx), *(acc_h->y + idx), *(acc_h->z + idx));
-    }
-    fprintf(fp1, "\n");
-  }
   fclose(fp1);
-  printf("loop end.\n");
+  printf("loop end\n");
   return 0;
 }
 
