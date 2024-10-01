@@ -149,6 +149,6 @@ typedef struct {
   Coord in;
 } Impulse;
 
-typedef enum { E_AIR = 0, E_CON, E_STEEL, E_M_END } E_Mednum;
+typedef enum { E_AIR = 0, E_CON, E_M_END } E_Mednum;
 typedef enum { E_SINE = 100, E_RCOS } E_KIND_OF_IP;
 typedef enum { E_HOLE = 200, E_CLACK } E_KIND_OF_DEFECT;

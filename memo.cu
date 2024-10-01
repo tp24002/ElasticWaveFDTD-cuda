@@ -1,24 +1,44 @@
-    cudaMemcpy(&d_medarrptr->ramda, &h_medarrptr->ramda, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->mu, &h_medarrptr->mu, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->c11, &h_medarrptr->c11, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->rho, &h_medarrptr->rho, sizeof(double*), cudaMemcpyHostToDevice);
+void transferBefAft(BefAft *ba_d, BefAft *ba_h, Range ran) {
+    int N = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    // Step 1: デバイスからホストへ構造体をコピー
+    cudaMemcpy(ba_h, ba_d, sizeof(BefAft), cudaMemcpyDeviceToHost);
 
-    cudaMemcpy(&d_medarrptr->zetaxx, &h_medarrptr->zetaxx, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetaxy, &h_medarrptr->zetaxy, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetaxz, &h_medarrptr->zetaxz, sizeof(double*), cudaMemcpyHostToDevice);
+    // Step 2: デバイス側のポインタを保存
+    double *device_Txx = ba_h->sa.Txx;
+    double *device_Tyy = ba_h->sa.Tyy;
+    double *device_Tzz = ba_h->sa.Tzz;
 
-    cudaMemcpy(&d_medarrptr->zetayx, &h_medarrptr->zetayx, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetayy, &h_medarrptr->zetayy, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetayz, &h_medarrptr->zetayz, sizeof(double*), cudaMemcpyHostToDevice);
+    double *device_Txy = ba_h->ta.Txy;
+    double *device_Tyz = ba_h->ta.Tyz;
+    double *device_Tzx = ba_h->ta.Tzx;
 
-    cudaMemcpy(&d_medarrptr->zetazx, &h_medarrptr->zetazx, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetazy, &h_medarrptr->zetazy, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetazz, &h_medarrptr->zetazz, sizeof(double*), cudaMemcpyHostToDevice);
+    double *device_Vx = ba_h->va.Vx;
+    double *device_Vy = ba_h->va.Vy;
+    double *device_Vz = ba_h->va.Vz;
 
-    cudaMemcpy(&d_medarrptr->gamma, &h_medarrptr->gamma, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->khi, &h_medarrptr->khi, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->xi11, &h_medarrptr->xi11, sizeof(double*), cudaMemcpyHostToDevice);
+    // Step 3: ホスト側でメモリを確保
+    ba_h->sa.Txx = (double *)malloc(N * sizeof(double));
+    ba_h->sa.Tyy = (double *)malloc(N * sizeof(double));
+    ba_h->sa.Tzz = (double *)malloc(N * sizeof(double));
 
-    cudaMemcpy(&d_medarrptr->zetadx, &h_medarrptr->zetadx, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetady, &h_medarrptr->zetady, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetadz, &h_medarrptr->zetadz, sizeof(double*), cudaMemcpyHostToDevice);
+    ba_h->ta.Txy = (double *)malloc(N * sizeof(double));
+    ba_h->ta.Tyz = (double *)malloc(N * sizeof(double));
+    ba_h->ta.Tzx = (double *)malloc(N * sizeof(double));
+
+    ba_h->va.Vx = (double *)malloc(N * sizeof(double));
+    ba_h->va.Vy = (double *)malloc(N * sizeof(double));
+    ba_h->va.Vz = (double *)malloc(N * sizeof(double));
+
+    // Step 4: デバイスからホストへデータをコピー
+    cudaMemcpy(ba_h->sa.Txx, device_Txx, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->sa.Tyy, device_Tyy, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->sa.Tzz, device_Tzz, N * sizeof(double), cudaMemcpyDeviceToHost);
+
+    cudaMemcpy(ba_h->ta.Txy, device_Txy, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->ta.Tyz, device_Tyz, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->ta.Tzx, device_Tzx, N * sizeof(double), cudaMemcpyDeviceToHost);
+
+    cudaMemcpy(ba_h->va.Vx, device_Vx, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->va.Vy, device_Vy, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->va.Vz, device_Vz, N * sizeof(double), cudaMemcpyDeviceToHost);
+}

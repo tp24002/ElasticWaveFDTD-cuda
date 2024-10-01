@@ -8,20 +8,57 @@
 #include "../header/struct.h"
 #include "../header/memory.h"
 
+///////////////////////////////
+// hostメモリ確保
+
+MedArr* allocateHostMedArr(Range *ran) {
+    MedArr *medarrptr;
+    medarrptr = (MedArr*)malloc(sizeof(MedArr));
+
+    medarrptr->c11    = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->gamma  = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->khi    = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->mu     = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->ramda  = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->rho    = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->xi11   = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetadx = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetady = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetadz = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetaxx = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetaxy = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetaxz = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetayx = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetayy = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetayz = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetazx = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetazy = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    medarrptr->zetazz = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    return medarrptr;
+}
+
+Impulse* allocateHostImpulse(Range *ran) {
+    Impulse *impulseptr;
+    impulseptr = (Impulse*)malloc(sizeof(Impulse));
+
+    impulseptr->Txx = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    impulseptr->Tyy = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    impulseptr->Tzz = (double*)malloc(ran->sr.Txx.x * ran->sr.Txx.y * ran->sr.Txx.z * sizeof(double));
+    return impulseptr;
+}
 
 AccCoord* allocateHostAccCoord(int outNum) {
     AccCoord *acccoordptr;
     acccoordptr = (AccCoord*)malloc(outNum * sizeof(AccCoord));
-
-    // acccoordptr->x = (double*)malloc(outNum * sizeof(double));
-    // acccoordptr->y = (double*)malloc(outNum * sizeof(double));
-    // acccoordptr->z = (double*)malloc(outNum * sizeof(double));
-
-    // printf("%p\n",acccoordptr);
-    // printf("%p\n",&acccoordptr->y);
     return acccoordptr;
-
 }
+
+Coord* allocateHostCoord(int outNum) {
+    Coord *coordptr;
+    coordptr = (Coord*)malloc(outNum * sizeof(Coord));
+    return coordptr;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 // deviceメモリ確保
 
@@ -119,10 +156,9 @@ BefAft* allocateDeviceBefAft(Range *ran) {
     cudaMemcpy(&(d_befaftptr->va.Vz), &h_befaftptr->va.Vz, sizeof(double*), cudaMemcpyHostToDevice);
     cudaMemcpy(&(d_befaftptr->va.Vzx), &h_befaftptr->va.Vzx, sizeof(double*), cudaMemcpyHostToDevice);
     cudaMemcpy(&(d_befaftptr->va.Vzy), &h_befaftptr->va.Vzy, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&(d_befaftptr->va.Vzz), &h_befaftptr->va.Vzz, sizeof(double*), cudaMemcpyHostToDevice);
+    cudaError_t err = cudaMemcpy(&(d_befaftptr->va.Vzz), &h_befaftptr->va.Vzz, sizeof(double*), cudaMemcpyHostToDevice);
 
-    cudaError_t err = cudaGetLastError();
-    printf("allocate device befaft: %s\n", cudaGetErrorString(err));
+    // printf("allocate device BefAft: %s\n", cudaGetErrorString(err));
 
     return d_befaftptr;
 }
@@ -182,10 +218,9 @@ MedArr* allocateDeviceMedArr(Range *ran) {
 
     cudaMemcpy(&d_medarrptr->zetadx, &h_medarrptr->zetadx, sizeof(double*), cudaMemcpyHostToDevice);
     cudaMemcpy(&d_medarrptr->zetady, &h_medarrptr->zetady, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&d_medarrptr->zetadz, &h_medarrptr->zetadz, sizeof(double*), cudaMemcpyHostToDevice);
+    cudaError_t err = cudaMemcpy(&d_medarrptr->zetadz, &h_medarrptr->zetadz, sizeof(double*), cudaMemcpyHostToDevice);
 
-    cudaError_t err = cudaGetLastError();
-    printf("allocate device medarr: %s\n", cudaGetErrorString(err));
+    // printf("allocate device MedArr: %s\n", cudaGetErrorString(err));
     // デバイスメモリのポインタを返す
     return d_medarrptr;
 
@@ -205,57 +240,213 @@ Impulse* allocateDeviceImpulse(Range *ran) {
     // メモリのポインタをデバイスに戻す
     cudaMemcpy(&(d_impulseptr->Txx), &h_impulseptr->Txx, sizeof(double*), cudaMemcpyHostToDevice);
     cudaMemcpy(&(d_impulseptr->Tyy), &h_impulseptr->Tyy, sizeof(double*), cudaMemcpyHostToDevice);
-    cudaMemcpy(&(d_impulseptr->Tzz), &h_impulseptr->Tzz, sizeof(double*), cudaMemcpyHostToDevice);
+    cudaError_t err = cudaMemcpy(&(d_impulseptr->Tzz), &h_impulseptr->Tzz, sizeof(double*), cudaMemcpyHostToDevice);
 
-    cudaError_t err = cudaGetLastError();
-    printf("allocate device impulse: %s\n", cudaGetErrorString(err));
+    // printf("allocate device impulse: %s\n", cudaGetErrorString(err));
     return d_impulseptr;
 }
 
-
 AccCoord* allocateDeviceAccCoord(int outNum) {
-    // AccCoord *h_acccoordptr;
     AccCoord *d_acccoordptr;
     
-    cudaMalloc(&d_acccoordptr, outNum * sizeof(AccCoord));  // デバイスメモリにAccCoord配列を確保
-    // h_acccoordptr = (AccCoord*)malloc(outNum * sizeof(AccCoord));  // ホストメモリにAccCoord配列を確保
+    cudaError_t err = cudaMalloc(&d_acccoordptr, outNum * sizeof(AccCoord));
 
-    // // 各AccCoord構造体のx, y, zに対してメモリ確保
-    // cudaMalloc((void**)&(h_acccoordptr->x), outNum * sizeof(double));
-    // cudaMalloc((void**)&(h_acccoordptr->y), outNum * sizeof(double));
-    // cudaMalloc((void**)&(h_acccoordptr->z), outNum * sizeof(double));
-
-    // // ホストからデバイスにx, y, zのポインタをコピー
-    // cudaMemcpy(&(d_acccoordptr->x), &(h_acccoordptr->x), sizeof(double*), cudaMemcpyHostToDevice);
-    // cudaMemcpy(&(d_acccoordptr->y), &(h_acccoordptr->y), sizeof(double*), cudaMemcpyHostToDevice);
-    // cudaMemcpy(&(d_acccoordptr->z), &(h_acccoordptr->z), sizeof(double*), cudaMemcpyHostToDevice);
-
-    cudaError_t err = cudaGetLastError();
-    printf("allocate device acccoord: %s\n", cudaGetErrorString(err));
     return d_acccoordptr;
 }
 
+Coord* allocateDeviceCoord(int outNum) {
+    Coord* d_coordptr;
+    cudaError_t err = cudaMalloc(&d_coordptr, outNum * sizeof(Coord));
+
+    return d_coordptr;
+}
 
 //////////////
 // データ転送
+// host to device
+void MedArrHostToDevice(MedArr *ma_h, MedArr *ma_d, Range ran) {
+    MedArr ma_tmp;
+    int size = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    double *ramda;
+    double *mu;
+    double *c11;
+    double *rho;
+    double *zetaxx;
+    double *zetaxy;
+    double *zetaxz;
+    double *zetayx;
+    double *zetayy;
+    double *zetayz;
+    double *zetazx;
+    double *zetazy;
+    double *zetazz;
+    double *gamma;
+    double *khi;
+    double *xi11;
+    double *zetadx;
+    double *zetady;
+    double *zetadz;
+    cudaMalloc(&ramda, size * sizeof(double));
+    cudaMalloc(&mu, size * sizeof(double));
+    cudaMalloc(&c11, size * sizeof(double));
+    cudaMalloc(&rho, size * sizeof(double));
+    cudaMalloc(&zetaxx, size * sizeof(double));
+    cudaMalloc(&zetaxy, size * sizeof(double));
+    cudaMalloc(&zetaxz, size * sizeof(double));
+    cudaMalloc(&zetayx, size * sizeof(double));
+    cudaMalloc(&zetayy, size * sizeof(double));
+    cudaMalloc(&zetayz, size * sizeof(double));
+    cudaMalloc(&zetazx, size * sizeof(double));
+    cudaMalloc(&zetazy, size * sizeof(double));
+    cudaMalloc(&zetazz, size * sizeof(double));
+    cudaMalloc(&gamma, size * sizeof(double));
+    cudaMalloc(&khi, size * sizeof(double));
+    cudaMalloc(&xi11, size * sizeof(double));
+    cudaMalloc(&zetadx, size * sizeof(double));
+    cudaMalloc(&zetady, size * sizeof(double));
+    cudaMalloc(&zetadz, size * sizeof(double));
+
+    cudaMemcpy(ramda, ma_h->ramda, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(mu, ma_h->mu, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(c11, ma_h->c11, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(rho, ma_h->rho, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetaxx, ma_h->zetaxx, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetaxy, ma_h->zetaxy, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetaxz, ma_h->zetaxz, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetayx, ma_h->zetayx, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetayy, ma_h->zetayy, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetayz, ma_h->zetayz, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetazx, ma_h->zetazx, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetazy, ma_h->zetazy, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetazz, ma_h->zetazz, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(gamma, ma_h->gamma, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(khi, ma_h->khi, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(xi11, ma_h->xi11, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetadx, ma_h->zetadx, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetady, ma_h->zetady, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(zetadz, ma_h->zetadz, size * sizeof(double), cudaMemcpyHostToDevice);
+    ma_tmp.ramda = ramda;
+    ma_tmp.mu = mu;
+    ma_tmp.c11 = c11;
+    ma_tmp.rho = rho;
+    ma_tmp.zetaxx = zetaxx;
+    ma_tmp.zetaxy = zetaxy;
+    ma_tmp.zetaxz = zetaxz;
+    ma_tmp.zetayx = zetayx;
+    ma_tmp.zetayy = zetayy;
+    ma_tmp.zetayz = zetayz;
+    ma_tmp.zetazx = zetazx;
+    ma_tmp.zetazy = zetazy;
+    ma_tmp.zetazz = zetazz;
+    ma_tmp.gamma = gamma;
+    ma_tmp.khi = khi;
+    ma_tmp.xi11 = xi11;
+    ma_tmp.zetadx = zetadx;
+    ma_tmp.zetady = zetady;
+    ma_tmp.zetadz = zetadz;
+
+    cudaError_t err = cudaMemcpy(ma_d, &ma_tmp, sizeof(MedArr), cudaMemcpyHostToDevice); 
+    // printf("host to device MedArr: %s\n", cudaGetErrorString(err));
+}
+
+void ImpulseHostToDevice(Impulse *ip_h, Impulse *ip_d, Range ran) {
+    Impulse ip_tmp;
+    int size = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    double *Txx;
+    double *Tyy;
+    double *Tzz;
+    cudaMalloc(&Txx, size * sizeof(double));
+    cudaMalloc(&Tyy, size * sizeof(double));
+    cudaMalloc(&Tzz, size * sizeof(double));
+
+
+    cudaMemcpy(Txx, ip_h->Txx, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(Tyy, ip_h->Tyy, size * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(Tzz, ip_h->Tzz, size * sizeof(double), cudaMemcpyHostToDevice);
+
+
+    ip_tmp.Txx = Txx;
+    ip_tmp.Tyy = Tyy;
+    ip_tmp.Tzz = Tzz;
+    ip_tmp.freq = ip_h->freq;
+    ip_tmp.mode = ip_h->mode;
+    ip_tmp.in = ip_h->in;
+    // ip_tmp.in.x = ip_h->in.x;
+    // ip_tmp.in.y = ip_h->in.y;
+    // ip_tmp.in.z = ip_h->in.z;
+
+    cudaError_t err = cudaMemcpy(ip_d, &ip_tmp, sizeof(Impulse), cudaMemcpyHostToDevice);
+    // printf("host to device Impulse: %s\n", cudaGetErrorString(err));
+    // cudaFree(Txx);
+    // cudaFree(Tyy);
+    // cudaFree(Tzz);
+}
+
+void RangeHostToDevice(Range *ran_h, Range *ran_d) {
+    cudaError_t err = cudaMemcpy(ran_d, ran_h, sizeof(Range), cudaMemcpyHostToDevice);
+
+    // printf("host to device Range: %s\n", cudaGetErrorString(err));
+}
+
+void DiffHostToDevice(Diff *dif_h, Diff *dif_d) {
+    cudaError_t err = cudaMemcpy(dif_d, dif_h, sizeof(Diff), cudaMemcpyHostToDevice);
+
+    // printf("host to device Diff: %s\n", cudaGetErrorString(err));
+}
+
+void CoordHostToDevice(Coord *out_h, Coord *out_d, int outNum) {
+    cudaError_t err = cudaMemcpy(out_d, out_h, outNum * sizeof(Coord), cudaMemcpyHostToDevice);
+    // printf("host to device Coord: %s\n", cudaGetErrorString(err));
+}
+// device to host
 
 void AccCoordDeviceToHost(AccCoord *acc_d, AccCoord *acc_h, int outNum) {
     // AccCoord acc_ptr;
-    cudaError_t err = cudaMemcpy(acc_h, acc_d, outNum * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // cudaMalloc(&acc_ptr.x, outNum * sizeof(double));
-    // cudaMalloc(&acc_ptr.y, outNum * sizeof(double));
-    // cudaMalloc(&acc_ptr.z, outNum * sizeof(double));
-
-    // cudaMemcpy(&acc_ptr.x, &acc_d->x, sizeof(double*), cudaMemcpyDeviceToHost);
-    // cudaMemcpy(&acc_ptr.y, &acc_d->y, sizeof(double*), cudaMemcpyDeviceToHost);
-    // cudaMemcpy(&acc_ptr.z, &acc_d->z, sizeof(double*), cudaMemcpyDeviceToHost);
-
-    // cudaMemcpy(acc_h->x, acc_ptr.x, outNum * sizeof(double), cudaMemcpyDeviceToHost);
-    // cudaMemcpy(acc_h->y, acc_ptr.y, outNum * sizeof(double), cudaMemcpyDeviceToHost);
-    // err = cudaMemcpy(acc_h->z, acc_ptr.z, outNum * sizeof(double), cudaMemcpyDeviceToHost);
-    // cudaError_t err = cudaGetLastError();
-
-    printf("acc device to host:%s\n", cudaGetErrorString(err));
+    cudaError_t err = cudaMemcpy(acc_h, acc_d, outNum * sizeof(AccCoord), cudaMemcpyDeviceToHost);
+    // printf("device to host AccCoord: %s\n", cudaGetErrorString(err));
 }
 
+void BefAftDeviceToHost(BefAft *ba_d, BefAft *ba_h, Range ran) {
+    int N = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    // Step 1: デバイスからホストへ構造体をコピー
+    cudaMemcpy(ba_h, ba_d, sizeof(BefAft), cudaMemcpyDeviceToHost);
+
+    // Step 2: デバイス側のポインタを保存
+    double *device_Txx = ba_h->sa.Txx;
+    double *device_Tyy = ba_h->sa.Tyy;
+    double *device_Tzz = ba_h->sa.Tzz;
+
+    double *device_Txy = ba_h->ta.Txy;
+    double *device_Tyz = ba_h->ta.Tyz;
+    double *device_Tzx = ba_h->ta.Tzx;
+
+    double *device_Vx = ba_h->va.Vx;
+    double *device_Vy = ba_h->va.Vy;
+    double *device_Vz = ba_h->va.Vz;
+
+    // Step 3: ホスト側でメモリを確保
+    ba_h->sa.Txx = (double *)malloc(N * sizeof(double));
+    ba_h->sa.Tyy = (double *)malloc(N * sizeof(double));
+    ba_h->sa.Tzz = (double *)malloc(N * sizeof(double));
+
+    ba_h->ta.Txy = (double *)malloc(N * sizeof(double));
+    ba_h->ta.Tyz = (double *)malloc(N * sizeof(double));
+    ba_h->ta.Tzx = (double *)malloc(N * sizeof(double));
+
+    ba_h->va.Vx = (double *)malloc(N * sizeof(double));
+    ba_h->va.Vy = (double *)malloc(N * sizeof(double));
+    ba_h->va.Vz = (double *)malloc(N * sizeof(double));
+
+    // Step 4: デバイスからホストへデータをコピー
+    cudaMemcpy(ba_h->sa.Txx, device_Txx, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->sa.Tyy, device_Tyy, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->sa.Tzz, device_Tzz, N * sizeof(double), cudaMemcpyDeviceToHost);
+
+    cudaMemcpy(ba_h->ta.Txy, device_Txy, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->ta.Tyz, device_Tyz, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->ta.Tzx, device_Tzx, N * sizeof(double), cudaMemcpyDeviceToHost);
+
+    cudaMemcpy(ba_h->va.Vx, device_Vx, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->va.Vy, device_Vy, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->va.Vz, device_Vz, N * sizeof(double), cudaMemcpyDeviceToHost);
+}

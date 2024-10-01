@@ -10,19 +10,13 @@
 #define MIN(i, j) (((i) < (j)) ? (i) : (j))
 #define MAX(i, j) (((i) > (j)) ? (i) : (j))
 
-__host__ void initHostCoord(Coord *co, int x, int y, int z) {
+void initCoord(Coord *co, int x, int y, int z) {
   co->x = x;
   co->y = y;
   co->z = z;
 }
 
-__device__ void initDeviceCoord(Coord *co, int x, int y, int z) {
-  co->x = x;
-  co->y = y;
-  co->z = z;
-}
-
-__global__ void initMedium(Medium *med) {
+void initMedium(Medium *med) {
   for (int mednum = 0; mednum < E_M_END; mednum++) {
     switch (mednum) {
       case E_AIR:
@@ -57,39 +51,36 @@ __global__ void initMedium(Medium *med) {
   }
 }
 
-__global__ void initDiff(Diff *dif, Medium *med) {
+void initDiff(Diff *dif, Medium *med) {
   dif->dx = 0.005;
   dif->dy = 0.005;
   dif->dz = 0.005;
   double tmp = 0;
   
-  for(int i = E_AIR; i < E_M_END - 1; i++){
+  for(int i = E_AIR; i < E_M_END; i++){
     tmp = MAX(sqrt((med[i].K + 4. / 3. * med[i].G) / med[i].rho),tmp);
   }
   dif->dt = dif->dx / (tmp * 100);
 }
 
-__global__ void initPml(Pml *pml, Medium *med, Diff dif) {
+void initPml(Pml *pml, Medium *med, Diff dif) {
   pml->ta = 4.;
   pml->fm = 3.574e4;
   double R = 1.e-20;
   double tmp = 0;
   double tmp_v = 0;//max
-  initDeviceCoord(&pml->pl1, 32, 32, 32);
-  initDeviceCoord(&pml->pl2, 32, 32, 32);
+  initCoord(&pml->pl1, 32, 32, 32);
+  initCoord(&pml->pl2, 32, 32, 32);
   //計算領域内最高速度
-  for(int i = E_AIR; i < E_M_END - 1; i++){
-    tmp_v = MAX(sqrt((med[i].K + 4. / 3. * med[i].G) / med[i].rho),tmp);
+  for(int i = E_AIR; i < E_M_END; i++){
+    tmp_v = MAX(sqrt((med[i].K + 4. / 3. * med[i].G) / med[i].rho), tmp_v);
   }
   //減衰係数最大値(PML層)
-  for (int i = E_AIR + 1; i < E_M_END; i++) {
-    tmp = tmp_v * (pml->ta + 1) / (2. * (double)pml->pl1.x * dif.dx) * log(1/R);
-    pml->fm = MAX(tmp, pml->fm);
-  }
-  printf("v = %f\n", tmp_v);
+  tmp = ((tmp_v * (pml->ta + 1)) / (2. * (double)pml->pl1.x * dif.dx)) * log(1/R);
+  pml->fm = MAX(tmp, pml->fm);
 }
 
-__global__ void initRange(Range *ran, Coord region, Pml pml) {
+void initRange(Range *ran, Coord region, Pml pml) {
   // initCoord(&ran->sr.Txx, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
   // initCoord(&ran->sr.Tyy, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
   // initCoord(&ran->sr.Tzz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
@@ -99,15 +90,15 @@ __global__ void initRange(Range *ran, Coord region, Pml pml) {
   // initCoord(&ran->vr.Vx , x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
   // initCoord(&ran->vr.Vy , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
   // initCoord(&ran->vr.Vz , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
-  initDeviceCoord(&ran->sr.Txx, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initDeviceCoord(&ran->sr.Tyy, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initDeviceCoord(&ran->sr.Tzz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initDeviceCoord(&ran->tr.Txy, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
-  initDeviceCoord(&ran->tr.Tyz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z + 1);
-  initDeviceCoord(&ran->tr.Tzx, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
-  initDeviceCoord(&ran->vr.Vx , region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initDeviceCoord(&ran->vr.Vy , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
-  initDeviceCoord(&ran->vr.Vz , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
+  initCoord(&ran->sr.Txx, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->sr.Tyy, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->sr.Tzz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->tr.Txy, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->tr.Tyz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z + 1);
+  initCoord(&ran->tr.Tzx, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
+  initCoord(&ran->vr.Vx , region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->vr.Vy , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
+  initCoord(&ran->vr.Vz , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
 } 
 
 void initRandom(Coord con_size, Coord *clack, int ratio) {
