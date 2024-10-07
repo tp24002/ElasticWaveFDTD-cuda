@@ -6,9 +6,6 @@
 __global__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
 __global__ void TyyUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
 __global__ void TzzUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
-__global__ void ZeroT_XY(BefAft *aft, Range *ran, char check);
-__global__ void ZeroT_YZ(BefAft *aft, Range *ran, char check);
-__global__ void ZeroT_ZX(BefAft *aft, Range *ran, char check);
 __global__ void DirectionalAdd(BefAft *aft, Impulse *ip, Range *ran, char check);
 void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Impulse *ip_d, Coord threads);
 void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Impulse *ip_d, Coord threads);
@@ -21,9 +18,6 @@ void Sig(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 __global__ void TxyUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
 __global__ void TyzUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
 __global__ void TzxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
-__global__ void ZeroTxy(BefAft *aft, Range *ran);
-__global__ void ZeroTyz(BefAft *aft, Range *ran);
-__global__ void ZeroTzx(BefAft *aft, Range *ran);
 __global__ void DirectionalAddT(BefAft *aft, Range *ran, char check);
 void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads);
 void Tyz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads);
@@ -36,12 +30,6 @@ void Tau(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 __global__ void VxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
 __global__ void VyUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
 __global__ void VzUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran);
-__global__ void ZeroVx_XY(BefAft *aft, Range *ran);
-__global__ void ZeroVx_XZ(BefAft *aft, Range *ran);
-__global__ void ZeroVy_YX(BefAft *aft, Range *ran);
-__global__ void ZeroVy_YZ(BefAft *aft, Range *ran);
-__global__ void ZeroVz_ZX(BefAft *aft, Range *ran);
-__global__ void ZeroVz_ZY(BefAft *aft, Range *ran);
 __global__ void DirectionalAddV(BefAft *aft, Range *ran, char check);
 void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads);
 void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads);

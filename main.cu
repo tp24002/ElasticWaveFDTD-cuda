@@ -32,6 +32,7 @@ int main(void) {
   BefAft bef_h, *bef_d;
   BefAft aft_h, *aft_d;
   Impulse *ip_h, *ip_d;
+  
   AccCoord *acc_h;
 
   // int RegionArea;
@@ -42,7 +43,7 @@ int main(void) {
   // char fn1[256],fn2[256],fn3[256],fn4[256];
   // int tmp = 0;
 
-  Coord *out_h, *out_d;
+  Coord *out_h;
   // Coord center;
   // // int make_models; // 作成するモデルの数
   // int model_count = 0; // いくつ目のモデルを作成中か
@@ -54,7 +55,7 @@ int main(void) {
 
   // スレッド数
   initCoord(&threads, 4, 4, 8);
-
+  
   // データ格納
   StaticVariable(med_h, &pml_h, &ran_h, &dif_h, &air_h, &con_h, &clack_h, &tmax_h, &outNum_h);
   // ホスト動的変数
@@ -68,7 +69,6 @@ int main(void) {
   bef_d = allocateDeviceBefAft(&ran_h);
   aft_d = allocateDeviceBefAft(&ran_h);
   ip_d  = allocateDeviceImpulse(&ran_h);
-  out_d = allocateDeviceCoord(outNum_h);
 
   // デバイス静的変数
   cudaMalloc(&ran_d, sizeof(Range));
@@ -79,10 +79,33 @@ int main(void) {
   // ホスト->デバイス　データ転送
   RangeHostToDevice(&ran_h, ran_d);
   DiffHostToDevice(&dif_h, dif_d);
-  CoordHostToDevice(out_h, out_d, outNum_h);
 
   MedArrHostToDevice(ma_h, ma_d, ran_h);
   ImpulseHostToDevice(ip_h, ip_d, ran_h);
+
+  dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
+  dim3 ZeroTBlocks((ran_h.sr.Txx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                   (ran_h.sr.Txx.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                   (ran_h.sr.Txx.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroTxyBlocks((ran_h.tr.Txy.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                     (ran_h.tr.Txy.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                     (ran_h.tr.Txy.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroTyzBlocks((ran_h.tr.Tyz.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                     (ran_h.tr.Tyz.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                     (ran_h.tr.Tyz.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroTzxBlocks((ran_h.tr.Tzx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                     (ran_h.tr.Tzx.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                     (ran_h.tr.Tzx.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroVxBlocks((ran_h.vr.Vx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (ran_h.vr.Vx.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (ran_h.vr.Vx.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroVyBlocks((ran_h.vr.Vy.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (ran_h.vr.Vy.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (ran_h.vr.Vy.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroVzBlocks((ran_h.vr.Vz.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (ran_h.vr.Vz.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (ran_h.vr.Vz.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+
   // 出力
   // Medium
   for(int i = 0; i < E_M_END; i++) {
@@ -122,6 +145,26 @@ int main(void) {
   //   // }
   // }
 
+  
+  // int idx, idy, idz;
+  // idx = ip_h->in.z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + ip_h->in.y * ran_h.sr.Txx.x + ip_h->in.x;
+  // idy = out_h[0].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[0].y * ran_h.sr.Txx.x + out_h[0].x;
+  // idz = out_h[1].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[1].y * ran_h.sr.Txx.x + out_h[1].x;
+  // for(int i = 0; i < ran_h.sr.Txx.x; i++) {
+  //   for(int j = 0; j < ran_h.sr.Txx.y; j++) {
+  //     id = j * ran_h.sr.Txx.x * ran_h.sr.Txx.y + ip_h->in.y * ran_h.sr.Txx.x + i;
+  //     if(id == idx) {
+  //       printf("*");
+  //     } else if(id == idy) {
+  //       printf("x");
+  //     } else if(id == idz) {
+  //       printf("x");
+  //     } else {
+  //       printf("o");
+  //     }
+  //   }
+  //   printf("\n");
+  // }
 
   //ファイル名出力
   // printf("%.*s\n", (int) sizeof fn1, fn1);
@@ -132,43 +175,37 @@ int main(void) {
   int model_count = 0;
   sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
   fp1 = fopen(fn1, "w");
-  // int blockSize = 256;  // 1ブロックあたりのスレッド数
-  // int gridSize = (outNum_h + blockSize - 1) / blockSize;  // Nをカバーするのに必要なブロック数
+
+  // 0 padding
+  ZeroT<<<ZeroTBlocks,threadsPerBlock>>>(aft_d, ran_d);
+  ZeroTxy<<<ZeroTxyBlocks,threadsPerBlock>>>(aft_d, ran_d);
+  ZeroTyz<<<ZeroTyzBlocks,threadsPerBlock>>>(aft_d, ran_d);
+  ZeroTzx<<<ZeroTzxBlocks,threadsPerBlock>>>(aft_d, ran_d);
+  ZeroVx<<<ZeroVxBlocks,threadsPerBlock>>>(aft_d, ran_d);
+  ZeroVy<<<ZeroVyBlocks,threadsPerBlock>>>(aft_d, ran_d);
+  ZeroVz<<<ZeroVzBlocks,threadsPerBlock>>>(aft_d, ran_d);
   for (t_h = 0; t_h < tmax_h; t_h++) {
     // 入力情報作成
     insertImpulse(ip_h, dif_h, t_h, ran_h);
-
-    // printf("aaaaaaaaaaaaaaaaaaaaaaaa%lf\n",ip_h->Tzz[ip_h->in.z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + ip_h->in.y * ran_h.sr.Txx.x + ip_h->in.x]);
     ImpulseHostToDevice(ip_h, ip_d, ran_h);
 
     Vel(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);
-    // printf("Vel OK\n");
     Sig(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, ip_d, threads);
-    // printf("Sig OK\n");
     Tau(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);
-    // printf("Tau OK\n");
+
     BefAftDeviceToHost(aft_d, &aft_h, ran_h);
     BefAftDeviceToHost(bef_d, &bef_h, ran_h);
-    // printf("befaft device to host ok\n");
+
     for(int j = 0; j < outNum_h; j++) {
       AccelerationCalculation(&acc_h[j], aft_h, bef_h, dif_h, out_h[j], ran_h);
       fprintf(fp1,"%le,%le,%le,", acc_h[j].x, acc_h[j].y, acc_h[j].z);
     }
     fprintf(fp1, "\n");
-    // 加速度算出＆書き込み
-    // AccelerationCalculation<<<gridSize,blockSize>>>(acc_d, aft_d, bef_d, dif_d, out_d, ran_d, outNum_d);//out
-    // cudaDeviceSynchronize();
-    // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-    // printf("CUDA kernel error acc       : %s\n", cudaGetErrorString(err));
-    // AccCoordDeviceToHost(acc_d, acc_h, outNum_h);
 
-    
-
-    // printf("acc calcu\n");
     swapBefAft(aft_d, bef_d, &ran_h, ran_d, threads);
-    // printf("swap befaft\n");
     progressBar(t_h, tmax_h);
   }
+  printf("%lf\n", aft_h.sa.Tzz[0]);
   fclose(fp1);
   printf("loop end\n");
   return 0;
@@ -192,17 +229,17 @@ void progressBar(int now, int max) {
 
 void AccelerationCalculation(AccCoord *Acc, BefAft aft, BefAft bef, Diff dif, Coord out, Range ran) {
 
-  int ymax = ran.sr.Txx.y, zmax = ran.sr.Txx.z;
+  int xmax = ran.sr.Txx.x, ymax = ran.sr.Txx.y;
 
   int x = out.x;
   int y = out.y;
   int z = out.z;
 
   // 1Dインデックスの計算
-  int idxX = (x - 1) * (ymax * zmax) +       y * zmax + z;
-  int idxY =       x * (ymax * zmax) + (y - 1) * zmax + z;
-  int idxZ =       x * (ymax * zmax) +       y * zmax + (z - 1);
-  int idx  =       x * (ymax * zmax) +       y * zmax + z;
+  int idx   = z * (xmax * ymax) + y * xmax + x;
+  int idxX  = z * (xmax * ymax) + y * xmax + (x + 1);
+  int idxY  = z * (xmax * ymax) + (y + 1) * xmax + x;
+  int idxZ  = (z + 1) * (xmax * ymax) + y * xmax + x;
 
   Acc->x = ((*(aft.va.Vx + idxX) - *(bef.va.Vx + idxX)) / dif.dt + (*(aft.va.Vx + idx) - *(bef.va.Vx + idx)) / dif.dt) / 2;
 

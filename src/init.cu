@@ -101,16 +101,16 @@ void initRange(Range *ran, Coord region, Pml pml) {
   initCoord(&ran->vr.Vz , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
 } 
 
-void initRandom(Coord con_size, Coord *clack, int ratio) {
-  if(con_size.x < 3 || con_size.y < 3 || con_size.z < 3) {
+void initRandom(Object con, Coord *clack, int ratio) {
+  if(con.range.x < 3 || con.range.y < 3 || con.range.z < 3) {
     printf("Cannot place defects.\n");
     return;
   }
   int count = 0;
   // コンクリートセル数
-  int max_Patern = con_size.x * con_size.y * con_size.z;
+  int max_Patern = con.range.x * con.range.y * con.range.z;
   // 内部欠陥パターン数
-  int max_ClackPatern = (con_size.x - 2) * (con_size.y - 2) * (con_size.z - 2);
+  int max_ClackPatern = (con.range.x - 2) * (con.range.y - 2) * (con.range.z - 2);
   // 割合による欠陥数
   int clack_count = max_Patern * ratio / 100;
   if(clack_count > max_ClackPatern){
@@ -123,9 +123,9 @@ void initRandom(Coord con_size, Coord *clack, int ratio) {
 
   while (count < clack_count) {
     // 新しい乱数の組み合わせを生成
-    int rand1 = rand() % (con_size.x - 2) + 1;
-    int rand2 = rand() % (con_size.y - 2) + 1;
-    int rand3 = rand() % (con_size.z - 2) + 1;
+    int rand1 = rand() % (con.range.x - 2) + 1;
+    int rand2 = rand() % (con.range.y - 2) + 1;
+    int rand3 = rand() % (con.range.z - 2) + 1;
 
     // 重複がないかチェック
     int is_unique = 1;
@@ -144,4 +144,121 @@ void initRandom(Coord con_size, Coord *clack, int ratio) {
       count++;
     }
   }
+}
+
+__global__ void ZeroT(BefAft *ba, Range *ran) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
+  int id;
+  if(i < imax && j < jmax && k < kmax) {
+    id = k * imax * jmax + j * imax + i;
+    ba->sa.Txx[id] = 0;
+    ba->sa.Txxx[id] = 0;
+    ba->sa.Txxy[id] = 0;
+    ba->sa.Txxz[id] = 0;
+    ba->sa.Tyy[id] = 0;
+    ba->sa.Tyyx[id] = 0;
+    ba->sa.Tyyy[id] = 0;
+    ba->sa.Tyyz[id] = 0;
+    ba->sa.Tzz[id] = 0;
+    ba->sa.Tzzx[id] = 0;
+    ba->sa.Tzzy[id] = 0;
+    ba->sa.Tzzz[id] = 0;
+  } 
+}
+
+__global__ void ZeroTxy(BefAft *ba, Range *ran) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int imax = ran->tr.Txy.x, jmax = ran->tr.Txy.y, kmax = ran->tr.Txy.z;
+  int id;
+  if(i < imax && j < jmax && k < kmax) {
+    id = k * imax * jmax + j * imax + i;
+    ba->ta.Txy[id] = 0;
+    ba->ta.Txyx[id] = 0;
+    ba->ta.Txyy[id] = 0;
+  } 
+}
+
+__global__ void ZeroTyz(BefAft *ba, Range *ran) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int imax = ran->tr.Tyz.x, jmax = ran->tr.Tyz.y, kmax = ran->tr.Tyz.z;
+  int id;
+  if(i < imax && j < jmax && k < kmax) {
+    id = k * imax * jmax + j * imax + i;
+    ba->ta.Tyz[id] = 0;
+    ba->ta.Tyzy[id] = 0;
+    ba->ta.Tyzz[id] = 0;
+  } 
+}
+
+__global__ void ZeroTzx(BefAft *ba, Range *ran) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int imax = ran->tr.Tzx.x, jmax = ran->tr.Tzx.y, kmax = ran->tr.Tzx.z;
+  int id;
+  if(i < imax && j < jmax && k < kmax) {
+    id = k * imax * jmax + j * imax + i;
+    ba->ta.Tzx[id] = 0;
+    ba->ta.Tzxz[id] = 0;
+    ba->ta.Tzxx[id] = 0;
+  } 
+}
+
+__global__ void ZeroVx(BefAft *ba, Range *ran) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int imax = ran->vr.Vx.x, jmax = ran->vr.Vx.y, kmax = ran->vr.Vx.z;
+  int id;
+  if(i < imax && j < jmax && k < kmax) {
+    id = k * imax * jmax + j * imax + i;
+    ba->va.Vx[id] = 0;
+    ba->va.Vxx[id] = 0;
+    ba->va.Vxy[id] = 0;
+    ba->va.Vxz[id] = 0;
+  } 
+}
+
+__global__ void ZeroVy(BefAft *ba, Range *ran) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int imax = ran->vr.Vy.x, jmax = ran->vr.Vy.y, kmax = ran->vr.Vy.z;
+  int id;
+  if(i < imax && j < jmax && k < kmax) {
+    id = k * imax * jmax + j * imax + i;
+    ba->va.Vy[id] = 0;
+    ba->va.Vyx[id] = 0;
+    ba->va.Vyy[id] = 0;
+    ba->va.Vyz[id] = 0;
+  } 
+}
+
+__global__ void ZeroVz(BefAft *ba, Range *ran) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
+
+  int imax = ran->vr.Vz.x, jmax = ran->vr.Vz.y, kmax = ran->vr.Vz.z;
+  int id;
+  if(i < imax && j < jmax && k < kmax) {
+    id = k * imax * jmax + j * imax + i;
+    ba->va.Vz[id] = 0;
+    ba->va.Vzx[id] = 0;
+    ba->va.Vzy[id] = 0;
+    ba->va.Vzz[id] = 0;
+  } 
 }

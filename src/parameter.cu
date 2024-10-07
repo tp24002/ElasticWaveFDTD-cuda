@@ -14,16 +14,16 @@
 void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, Object *con, Object *clack, int *tmax, int *outNum) {
   // 入力
   Coord region;
-  initCoord(&region, 10, 10, 10);
+  initCoord(&region, 5, 5, 5);
   Coord con_start;
   Coord con_ran;
   initCoord(&con_start, 3, 3, 3);
-  initCoord(&con_ran, 3, 3, 3);
+  initCoord(&con_ran, 0, 0, 0);
   Coord clack_start;
   Coord clack_ran;
   initCoord(&clack_start, 3, 3, 3);
-  initCoord(&clack_ran, 1, 1, 1);
-  *tmax = 32768;
+  initCoord(&clack_ran, 0, 0, 0);
+  *tmax = 256;
   *outNum = 2;
   
 
@@ -41,12 +41,12 @@ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, O
   initCoord(&air->range, ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
   // con
   con->med = med[E_CON];
-  initCoord(&con->sp, con_start.x, con_start.y, con_start.z);
+  initCoord(&con->sp, con_start.x + pml->pl1.x - 1, con_start.y + pml->pl1.y - 1, con_start.z + pml->pl1.z - 1);
   initCoord(&con->range, con_ran.x, con_ran.y, con_ran.z);
   // 複数欠陥要検討
   // clack
   clack->med = med[E_AIR];
-  initCoord(&clack->sp, clack_start.x, clack_start.y, clack_start.z);
+  initCoord(&clack->sp, clack_start.x + pml->pl1.x - 1, clack_start.y + pml->pl1.y - 1, clack_start.z + pml->pl1.z - 1);
   initCoord(&clack->range, clack_ran.x, clack_ran.y, clack_ran.z);
 }
 
@@ -54,8 +54,8 @@ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, O
 // メモリ確保後に実行する必要がある
 void DynamicVariable(AccCoord *acc, MedArr *ma, Impulse *ip, Range ran, Object air, Object con, Object clack, Pml pml, Coord *out, int outNum) {
   // out
-  initCoord(&out[0], 3, 3, 3);
-  initCoord(&out[1], 10, 10, 10);
+  initCoord(&out[0],  1 + pml.pl1.x - 1, 2 + pml.pl1.y - 1, 2 + pml.pl1.z - 1);
+  initCoord(&out[1],  3 + pml.pl1.x - 1, 2 + pml.pl1.y - 1, 2 + pml.pl1.z - 1);
   // acc
   insertAccCoord(acc, outNum);
   // ma
@@ -66,7 +66,7 @@ void DynamicVariable(AccCoord *acc, MedArr *ma, Impulse *ip, Range ran, Object a
   // ip
   ip->freq = 2.0e6;
   ip->mode = E_RCOS;
-  initCoord(&ip->in, 10, 10, 10);//pml
+  initCoord(&ip->in, 2 + pml.pl1.x - 1, 2 + pml.pl1.y - 1, 2 + pml.pl1.z - 1);//pml
 
 }
 

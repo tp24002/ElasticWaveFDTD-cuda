@@ -90,7 +90,7 @@ typedef struct {
   double *zetadx;
   double *zetady;
   double *zetadz;
-} MedArr;
+} MedArr; // 19
 
 typedef struct {
   double *Txx;
@@ -105,7 +105,7 @@ typedef struct {
   double *Tzzx;
   double *Tzzy;
   double *Tzzz;
-} SigArr;
+} SigArr; // 12
 
 typedef struct {
   double *Txy;
@@ -117,7 +117,7 @@ typedef struct {
   double *Tzx;
   double *Tzxz;
   double *Tzxx;
-} TauArr;
+} TauArr; // 9
 
 typedef struct {
   double *Vx;
@@ -132,7 +132,7 @@ typedef struct {
   double *Vzx;
   double *Vzy;
   double *Vzz;
-} VelArr;
+} VelArr; // 12
 
 typedef struct {
   SigArr sa;
@@ -147,7 +147,7 @@ typedef struct {
   double freq;
   int mode;
   Coord in;
-} Impulse;
+} Impulse; // 3
 
 typedef enum { E_AIR = 0, E_CON, E_M_END } E_Mednum;
 typedef enum { E_SINE = 100, E_RCOS } E_KIND_OF_IP;
