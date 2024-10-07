@@ -10,7 +10,7 @@ typedef struct {
   double x;
   double y;
   double z;
-} Coord_acc;
+} AccCoord;
 
 typedef struct {
   double rho;
@@ -57,8 +57,8 @@ typedef struct {
 } Range;
 
 typedef struct {
-  Coord pl1;
-  Coord pl2;
+  Coord pl1;// min ~ range
+  Coord pl2;// range ~ max
   double ta;
   double fm;
 } Pml;
@@ -71,68 +71,68 @@ typedef struct {
 } Diff;
 
 typedef struct {
-  double ***ramda;
-  double ***mu;
-  double ***c11;
-  double ***rho;
-  double ***zetaxx;
-  double ***zetaxy;
-  double ***zetaxz;
-  double ***zetayx;
-  double ***zetayy;
-  double ***zetayz;
-  double ***zetazx;
-  double ***zetazy;
-  double ***zetazz;
-  double ***gamma;
-  double ***khi;
-  double ***xi11;
-  double ***zetadx;
-  double ***zetady;
-  double ***zetadz;
-} MedArr;
+  double *ramda;
+  double *mu;
+  double *c11;
+  double *rho;
+  double *zetaxx;
+  double *zetaxy;
+  double *zetaxz;
+  double *zetayx;
+  double *zetayy;
+  double *zetayz;
+  double *zetazx;
+  double *zetazy;
+  double *zetazz;
+  double *gamma;
+  double *khi;
+  double *xi11;
+  double *zetadx;
+  double *zetady;
+  double *zetadz;
+} MedArr; // 19
 
 typedef struct {
-  double ***Txx;
-  double ***Txxx;
-  double ***Txxy;
-  double ***Txxz;
-  double ***Tyy;
-  double ***Tyyx;
-  double ***Tyyy;
-  double ***Tyyz;
-  double ***Tzz;
-  double ***Tzzx;
-  double ***Tzzy;
-  double ***Tzzz;
-} SigArr;
+  double *Txx;
+  double *Txxx;
+  double *Txxy;
+  double *Txxz;
+  double *Tyy;
+  double *Tyyx;
+  double *Tyyy;
+  double *Tyyz;
+  double *Tzz;
+  double *Tzzx;
+  double *Tzzy;
+  double *Tzzz;
+} SigArr; // 12
 
 typedef struct {
-  double ***Txy;
-  double ***Txyx;
-  double ***Txyy;
-  double ***Tyz;
-  double ***Tyzy;
-  double ***Tyzz;
-  double ***Tzx;
-  double ***Tzxz;
-  double ***Tzxx;
-} TauArr;
+  double *Txy;
+  double *Txyx;
+  double *Txyy;
+  double *Tyz;
+  double *Tyzy;
+  double *Tyzz;
+  double *Tzx;
+  double *Tzxz;
+  double *Tzxx;
+} TauArr; // 9
 
 typedef struct {
-  double ***Vx;
-  double ***Vxx;
-  double ***Vxy;
-  double ***Vxz;
-  double ***Vy;
-  double ***Vyx;
-  double ***Vyy;
-  double ***Vyz;
-  double ***Vz;
-  double ***Vzx;
-  double ***Vzy;
-  double ***Vzz;
-} VelArr;
+  double *Vx;
+  double *Vxx;
+  double *Vxy;
+  double *Vxz;
+  double *Vy;
+  double *Vyx;
+  double *Vyy;
+  double *Vyz;
+  double *Vz;
+  double *Vzx;
+  double *Vzy;
+  double *Vzz;
+} VelArr; // 12
 
 typedef struct {
   SigArr sa;
@@ -141,14 +141,14 @@ typedef struct {
 } BefAft;
 
 typedef struct {
-  double ***Txx;
-  double ***Tyy;
-  double ***Tzz;
+  double *Txx;
+  double *Tyy;
+  double *Tzz;
   double freq;
   int mode;
   Coord in;
-} Inpaluse;
+} Impulse; // 3
 
-typedef enum { E_AIR = 0, E_CON, E_STEEL, E_M_END } E_Mednum;
+typedef enum { E_AIR = 0, E_CON, E_M_END } E_Mednum;
 typedef enum { E_SINE = 100, E_RCOS } E_KIND_OF_IP;
 typedef enum { E_HOLE = 200, E_CLACK } E_KIND_OF_DEFECT;
