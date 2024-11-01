@@ -13,7 +13,7 @@
 // 垂直応力
 
 // 垂直応力更新並列関数
-__global__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void TxxUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
@@ -21,26 +21,31 @@ __global__ void TxxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range
   int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
 
   if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
-    int idx    = k * imax * jmax + j * imax + i;
-    int idx_i1 = k * imax * jmax + j * imax + (i + 1);
-    int idx_j1 = k * imax * jmax + (j + 1) * imax + i;
-    int idx_k1 = (k + 1) * imax * jmax + j * imax + i;
+    // int idx    = Dgetid<<<1,1>>>(ran->sr.Txx, i, j, k);
+    // int idx_i1 = Dgetid<<<1,1>>>(ran->sr.Txx, i + 1, j, k);
+    // int idx_j1 = Dgetid<<<1,1>>>(ran->sr.Txx, i, j + 1, k);
+    // int idx_k1 = Dgetid<<<1,1>>>(ran->sr.Txx, i, j, k + 1);
+    int idx = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+    int idx_i1 = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + (i + 1);
+    int idx_j1 = k * ran->sr.Txx.x * ran->sr.Txx.y + (j + 1) * ran->sr.Txx.x + i;
+    int idx_k1 = (k + 1) * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
 
-    aft->sa.Txxx[idx] = (2.0 - ma->zetadx[idx] * dif->dt) / (2.0 + ma->zetadx[idx] * dif->dt) * bef->sa.Txxx[idx]
-        + 2.0 * (ma->c11[idx] * dif->dt + ma->xi11[idx]) / (2.0 + ma->zetadx[idx] * dif->dt) * (aft->va.Vx[idx_i1] - aft->va.Vx[idx]) / dif->dx
-        - 2.0 * ma->xi11[idx] / (2.0 + ma->zetadx[idx] * dif->dt) * (bef->va.Vx[idx_i1] - bef->va.Vx[idx]) / dif->dx;
+    aftsa.Txxx[idx] = (2.0 - ma[idx].zetadx * dif->dt) / (2.0 + ma[idx].zetadx * dif->dt) * befsa.Txxx[idx]
+        + 2.0 * (ma[idx].c11 * dif->dt + ma[idx].xi11) / (2.0 + ma[idx].zetadx * dif->dt) * (aftva.Vx[idx_i1] - aftva.Vx[idx]) / dif->dx
+        - 2.0 * ma[idx].xi11 / (2.0 + ma[idx].zetadx * dif->dt) * (befva.Vx[idx_i1] - befva.Vx[idx]) / dif->dx;
 
-    aft->sa.Txxy[idx] = (2.0 - ma->zetady[idx] * dif->dt) / (2.0 + ma->zetady[idx] * dif->dt) * bef->sa.Txxy[idx]
-        + 2.0 * (ma->ramda[idx] * dif->dt + ma->khi[idx]) / (2.0 + ma->zetady[idx] * dif->dt) * (aft->va.Vy[idx_j1] - aft->va.Vy[idx]) / dif->dy
-        - 2.0 * ma->khi[idx] / (2.0 + ma->zetady[idx] * dif->dt) * (bef->va.Vy[idx_j1] - bef->va.Vy[idx]) / dif->dy;
+    aftsa.Txxy[idx] = (2.0 - ma[idx].zetady * dif->dt) / (2.0 + ma[idx].zetady * dif->dt) * befsa.Txxy[idx]
+        + 2.0 * (ma[idx].ramda * dif->dt + ma[idx].khi) / (2.0 + ma[idx].zetady * dif->dt) * (aftva.Vy[idx_j1] - aftva.Vy[idx]) / dif->dy
+        - 2.0 * ma[idx].khi / (2.0 + ma[idx].zetady * dif->dt) * (befva.Vy[idx_j1] - befva.Vy[idx]) / dif->dy;
 
-    aft->sa.Txxz[idx] = (2.0 - ma->zetadz[idx] * dif->dt) / (2.0 + ma->zetadz[idx] * dif->dt) * bef->sa.Txxz[idx]
-        + 2.0 * (ma->ramda[idx] * dif->dt + ma->khi[idx]) / (2.0 + ma->zetadz[idx] * dif->dt) * (aft->va.Vz[idx_k1] - aft->va.Vz[idx]) / dif->dz
-        - 2.0 * ma->khi[idx] / (2.0 + ma->zetadz[idx] * dif->dt) * (bef->va.Vz[idx_k1] - bef->va.Vz[idx]) / dif->dz;
+    aftsa.Txxz[idx] = (2.0 - ma[idx].zetadz * dif->dt) / (2.0 + ma[idx].zetadz * dif->dt) * befsa.Txxz[idx]
+        + 2.0 * (ma[idx].ramda * dif->dt + ma[idx].khi) / (2.0 + ma[idx].zetadz * dif->dt) * (aftva.Vz[idx_k1] - aftva.Vz[idx]) / dif->dz
+        - 2.0 * ma[idx].khi / (2.0 + ma[idx].zetadz * dif->dt) * (befva.Vz[idx_k1] - befva.Vz[idx]) / dif->dz;
   }
 }
+
 // 垂直応力更新並列関数
-__global__ void TyyUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void TyyUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
@@ -48,53 +53,63 @@ __global__ void TyyUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range
   int imax = ran->sr.Tyy.x, jmax = ran->sr.Tyy.y, kmax = ran->sr.Tyy.z;
 
   if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
-    int idx    = k * imax * jmax + j * imax + i;
-    int idx_i1 = k * imax * jmax + j * imax + (i + 1);
-    int idx_j1 = k * imax * jmax + (j + 1) * imax + i;
-    int idx_k1 = (k + 1) * imax * jmax + j * imax + i;
+    // int idx    = Dgetid<<<1,1>>>(ran->sr.Tyy, i, j, k);
+    // int idx_i1 = Dgetid<<<1,1>>>(ran->sr.Tyy, i + 1, j, k);
+    // int idx_j1 = Dgetid<<<1,1>>>(ran->sr.Tyy, i, j + 1, k);
+    // int idx_k1 = Dgetid<<<1,1>>>(ran->sr.Tyy, i, j, k + 1);
+    int idx = k * ran->sr.Tyy.x * ran->sr.Tyy.y + j * ran->sr.Tyy.x + i;
+    int idx_i1 = k * ran->sr.Tyy.x * ran->sr.Tyy.y + j * ran->sr.Tyy.x + (i + 1);
+    int idx_j1 = k * ran->sr.Tyy.x * ran->sr.Tyy.y + (j + 1) * ran->sr.Tyy.x + i;
+    int idx_k1 = (k + 1) * ran->sr.Tyy.x * ran->sr.Tyy.y + j * ran->sr.Tyy.x + i;
 
-    aft->sa.Tyyx[idx] = (2.0 - ma->zetadx[idx] * dif->dt) / (2.0 + ma->zetadx[idx] * dif->dt) * bef->sa.Tyyx[idx]
-        + 2.0 * (ma->ramda[idx] * dif->dt + ma->khi[idx]) / (2.0 + ma->zetadx[idx] * dif->dt) * (aft->va.Vx[idx_i1] - aft->va.Vx[idx]) / dif->dx
-        - 2.0 * ma->khi[idx] / (2.0 + ma->zetadx[idx] * dif->dt) * (bef->va.Vx[idx_i1] - bef->va.Vx[idx]) / dif->dx;
+    aftsa.Tyyx[idx] = (2.0 - ma[idx].zetadx * dif->dt) / (2.0 + ma[idx].zetadx * dif->dt) * befsa.Tyyx[idx]
+        + 2.0 * (ma[idx].ramda * dif->dt + ma[idx].khi) / (2.0 + ma[idx].zetadx * dif->dt) * (aftva.Vx[idx_i1] - aftva.Vx[idx]) / dif->dx
+        - 2.0 * ma[idx].khi / (2.0 + ma[idx].zetadx * dif->dt) * (befva.Vx[idx_i1] - befva.Vx[idx]) / dif->dx;
 
-    aft->sa.Tyyy[idx] = (2.0 - ma->zetady[idx] * dif->dt) / (2.0 + ma->zetady[idx] * dif->dt) * bef->sa.Tyyy[idx]
-        + 2.0 * (ma->c11[idx] * dif->dt + ma->xi11[idx]) / (2.0 + ma->zetady[idx] * dif->dt) * (aft->va.Vy[idx_j1] - aft->va.Vy[idx]) / dif->dy
-        - 2.0 * ma->xi11[idx] / (2.0 + ma->zetady[idx] * dif->dt) * (bef->va.Vy[idx_j1] - bef->va.Vy[idx]) / dif->dy;
+    aftsa.Tyyy[idx] = (2.0 - ma[idx].zetady * dif->dt) / (2.0 + ma[idx].zetady * dif->dt) * befsa.Tyyy[idx]
+        + 2.0 * (ma[idx].c11 * dif->dt + ma[idx].xi11) / (2.0 + ma[idx].zetady * dif->dt) * (aftva.Vy[idx_j1] - aftva.Vy[idx]) / dif->dy
+        - 2.0 * ma[idx].xi11 / (2.0 + ma[idx].zetady * dif->dt) * (befva.Vy[idx_j1] - befva.Vy[idx]) / dif->dy;
 
-    aft->sa.Tyyz[idx] = (2.0 - ma->zetadz[idx] * dif->dt) / (2.0 + ma->zetadz[idx] * dif->dt) * bef->sa.Tyyz[idx]
-        + 2.0 * (ma->ramda[idx] * dif->dt + ma->khi[idx]) / (2.0 + ma->zetadz[idx] * dif->dt) * (aft->va.Vz[idx_k1] - aft->va.Vz[idx]) / dif->dz
-        - 2.0 * ma->khi[idx] / (2.0 + ma->zetadz[idx] * dif->dt) * (bef->va.Vz[idx_k1] - bef->va.Vz[idx]) / dif->dz;
+    aftsa.Tyyz[idx] = (2.0 - ma[idx].zetadz * dif->dt) / (2.0 + ma[idx].zetadz * dif->dt) * befsa.Tyyz[idx]
+        + 2.0 * (ma[idx].ramda * dif->dt + ma[idx].khi) / (2.0 + ma[idx].zetadz * dif->dt) * (aftva.Vz[idx_k1] - aftva.Vz[idx]) / dif->dz
+        - 2.0 * ma[idx].khi / (2.0 + ma[idx].zetadz * dif->dt) * (befva.Vz[idx_k1] - befva.Vz[idx]) / dif->dz;
   }
 }
+
 // 垂直応力更新並列関数
-__global__ void TzzUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void TzzUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
-
   int imax = ran->sr.Tzz.x, jmax = ran->sr.Tzz.y, kmax = ran->sr.Tzz.z;
   
   if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
-    int idx     = k * imax * jmax + j * imax + i;
-    int idx_im1 = k * imax * jmax + j * imax + (i + 1);
-    int idx_jm1 = k * imax * jmax + (j + 1) * imax + i;
-    int idx_km1 = (k + 1) * imax * jmax + j * imax + i;
+    // int idx     = Dgetid<<<1,1>>>(ran->sr.Tzz, i, j, k);
+    // int idx_im1 = Dgetid<<<1,1>>>(ran->sr.Tzz, i + 1, j, k);
+    // int idx_jm1 = Dgetid<<<1,1>>>(ran->sr.Tzz, i, j + 1, k);
+    // int idx_km1 = Dgetid<<<1,1>>>(ran->sr.Tzz, i, j, k + 1);
+    int idx = k * ran->sr.Tzz.x * ran->sr.Tzz.y + j * ran->sr.Tzz.x + i;
+    int idx_im1 = k * ran->sr.Tzz.x * ran->sr.Tzz.y + j * ran->sr.Tzz.x + (i + 1);
+    int idx_jm1 = k * ran->sr.Tzz.x * ran->sr.Tzz.y + (j + 1) * ran->sr.Tzz.x + i;
+    int idx_km1 = (k + 1) * ran->sr.Tzz.x * ran->sr.Tzz.y + j * ran->sr.Tzz.x + i;
 
-    aft->sa.Tzzx[idx] = (2.0 - ma->zetadx[idx] * dif->dt) / (2.0 + ma->zetadx[idx] * dif->dt) * bef->sa.Tzzx[idx]
-        + 2.0 * (ma->ramda[idx] * dif->dt + ma->khi[idx]) / (2.0 + ma->zetadx[idx] * dif->dt) * (aft->va.Vx[idx_im1] - aft->va.Vx[idx]) / dif->dx
-        - 2.0 * ma->khi[idx] / (2.0 + ma->zetadx[idx] * dif->dt) * (bef->va.Vx[idx_im1] - bef->va.Vx[idx]) / dif->dx;
 
-    aft->sa.Tzzy[idx] = (2.0 - ma->zetady[idx] * dif->dt) / (2.0 + ma->zetady[idx] * dif->dt) * bef->sa.Tzzy[idx]
-        + 2.0 * (ma->ramda[idx] * dif->dt + ma->khi[idx]) / (2.0 + ma->zetady[idx] * dif->dt) * (aft->va.Vy[idx_jm1] - aft->va.Vy[idx]) / dif->dy
-        - 2.0 * ma->khi[idx] / (2.0 + ma->zetady[idx] * dif->dt) * (bef->va.Vy[idx_jm1] - bef->va.Vy[idx]) / dif->dy;
+    aftsa.Tzzx[idx] = (2.0 - ma[idx].zetadx * dif->dt) / (2.0 + ma[idx].zetadx * dif->dt) * befsa.Tzzx[idx]
+        + 2.0 * (ma[idx].ramda * dif->dt + ma[idx].khi) / (2.0 + ma[idx].zetadx * dif->dt) * (aftva.Vx[idx_im1] - aftva.Vx[idx]) / dif->dx
+        - 2.0 * ma[idx].khi / (2.0 + ma[idx].zetadx * dif->dt) * (befva.Vx[idx_im1] - befva.Vx[idx]) / dif->dx;
 
-    aft->sa.Tzzz[idx] = (2.0 - ma->zetadz[idx] * dif->dt) / (2.0 + ma->zetadz[idx] * dif->dt) * bef->sa.Tzzz[idx]
-        + 2.0 * (ma->c11[idx] * dif->dt + ma->xi11[idx]) / (2.0 + ma->zetadz[idx] * dif->dt) * (aft->va.Vz[idx_km1] - aft->va.Vz[idx]) / dif->dz
-        - 2.0 * ma->xi11[idx] / (2.0 + ma->zetadz[idx] * dif->dt) * (bef->va.Vz[idx_km1] - bef->va.Vz[idx]) / dif->dz;
+    aftsa.Tzzy[idx] = (2.0 - ma[idx].zetady * dif->dt) / (2.0 + ma[idx].zetady * dif->dt) * befsa.Tzzy[idx]
+        + 2.0 * (ma[idx].ramda * dif->dt + ma[idx].khi) / (2.0 + ma[idx].zetady * dif->dt) * (aftva.Vy[idx_jm1] - aftva.Vy[idx]) / dif->dy
+        - 2.0 * ma[idx].khi / (2.0 + ma[idx].zetady * dif->dt) * (befva.Vy[idx_jm1] - befva.Vy[idx]) / dif->dy;
+
+    aftsa.Tzzz[idx] = (2.0 - ma[idx].zetadz * dif->dt) / (2.0 + ma[idx].zetadz * dif->dt) * befsa.Tzzz[idx]
+        + 2.0 * (ma[idx].c11 * dif->dt + ma[idx].xi11) / (2.0 + ma[idx].zetadz * dif->dt) * (aftva.Vz[idx_km1] - aftva.Vz[idx]) / dif->dz
+        - 2.0 * ma[idx].xi11 / (2.0 + ma[idx].zetadz * dif->dt) * (befva.Vz[idx_km1] - befva.Vz[idx]) / dif->dz;
   }
 }
+
 // 全方向加算
-__global__ void DirectionalAdd(BefAft *aft, Impulse *ip, Range *ran, char check) {
+__global__ void DirectionalAdd(SigArr aftsa, ImpulseArr *ipa, Range *ran, char check) {
   // 1Dインデックスの計算
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -103,24 +118,55 @@ __global__ void DirectionalAdd(BefAft *aft, Impulse *ip, Range *ran, char check)
   int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
 
   // 1Dインデックス化
-  int idx = k * imax * jmax + j * imax + i;
+  // int id = Dgetid<<<1,1>>>(ran->sr.Txx, i, j, k);
+  int id = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
   // printf("%lf\n",*ip->Txx);
   if (i < imax && j < jmax && k < kmax) {
     // 各方向に応じた計算を実行（ポインタ表記）
     if (check == 'X') {
-      aft->sa.Txx[idx] = aft->sa.Txxx[idx] + aft->sa.Txxy[idx] + aft->sa.Txxz[idx] + ip->Txx[idx];
+      aftsa.Txx[id] = aftsa.Txxx[id] + aftsa.Txxy[id] + aftsa.Txxz[id] + ipa[id].Txx;
     } else if (check == 'Y') {
-      aft->sa.Tyy[idx] = aft->sa.Tyyx[idx] + aft->sa.Tyyy[idx] + aft->sa.Tyyz[idx] + ip->Tyy[idx];
+      aftsa.Tyy[id] = aftsa.Tyyx[id] + aftsa.Tyyy[id] + aftsa.Tyyz[id] + ipa[id].Tyy;
     } else if (check == 'Z') {
-      aft->sa.Tzz[idx] = aft->sa.Tzzx[idx] + aft->sa.Tzzy[idx] + aft->sa.Tzzz[idx] + ip->Tzz[idx];
+      aftsa.Tzz[id] = aftsa.Tzzx[id] + aftsa.Tzzy[id] + aftsa.Tzzz[id] + ipa[id].Tzz;
+      // printf("aft:%lf\n", aft->sa.Tzz[159423]);
     } else {
       printf("error: DirectionalAdd\n");
+    }
+  }
+  
+
+}
+
+__global__ void createImpulse(ImpulseArr *ipa, Impulse *ip, Diff *dif, Range *ran, int innum, int t) {
+  int id;
+  for(int num = 0; num < innum; num++) {
+    // id = Dgetid<<<1,1>>>(ran->sr.Txx, ip[num].in.x, ip[num].in.y, ip[num].in.z);
+    id = ip[num].in.z * ran->sr.Txx.x * ran->sr.Txx.y + ip[num].in.y * ran->sr.Txx.x + ip[num].in.x;
+    if (ip->mode == E_SINE) {
+      ipa[id].Txx = 0;
+      ipa[id].Tyy = 0;
+      ipa[id].Tzz = 8.e3 * 0.5 * sin(2. * M_PI * ip->freq * (double)t * dif->dt) / 2.;
+    } else if (ip->mode == E_RCOS) {
+      if (t < 1. / ip->freq / dif->dt) {
+        ipa[id].Txx = 0;
+        ipa[id].Tyy = 0;
+        ipa[id].Tzz = 8.e3 * 0.5 * (1. - cos(2. * M_PI * ip->freq * (double)t * dif->dt)) / 2.;
+      } else {
+        ipa[id].Txx = 0;
+        ipa[id].Tyy = 0;
+        ipa[id].Tzz = 0;
+      }
+    } else {
+      ipa[id].Txx = 0;
+      ipa[id].Tyy = 0;
+      ipa[id].Tzz = 0;
     }
   }
 }
 
 // Txxクラス的な(Blocks大丈夫かな？)
-void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Impulse *ip_d, Coord threads) {
+void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, ImpulseArr *ipa_d, DimI3 threads) {
   // cudaError_t err;
   // char check = 'X';
 
@@ -137,7 +183,7 @@ void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
                             (Txxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
                             (Txxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // Txx更新式
-  TxxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  TxxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->sa, aft_d->va, bef_d->sa, bef_d->va, ma_d, dif_d, ran_d);
   // 0 padding
   // ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d, 'X');
   // ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d, 'X');
@@ -146,14 +192,14 @@ void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Txx zero  : %s\n", cudaGetErrorString(err));
   //全方向加算
-  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ran_d, 'X');
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->sa, ipa_d, ran_d, 'X');
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Txx add   : %s\n", cudaGetErrorString(err));
 
 }
 // Tyyクラス的な(Blocks大丈夫かな？)
-void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Impulse *ip_d, Coord threads) {
+void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, ImpulseArr *ipa_d, DimI3 threads) {
   // cudaError_t err;
   char check = 'Y';
 
@@ -170,7 +216,7 @@ void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
                             (Tyyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                             (Tyykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // Tyy更新式
-  TyyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  TyyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->sa, aft_d->va, bef_d->sa, bef_d->va, ma_d, dif_d, ran_d);
   // 0 padding
   // ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
   // ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
@@ -179,13 +225,13 @@ void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tyy zero  : %s\n", cudaGetErrorString(err));
   // 全方向加算
-  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ran_d, check);
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->sa, ipa_d, ran_d, check);
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tyy add   : %s\n", cudaGetErrorString(err));
 }
 // Tzzクラス的な(Blocks大丈夫かな？)
-void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Impulse *ip_d, Coord threads) {
+void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, ImpulseArr *ipa_d, DimI3 threads) {
   // cudaError_t err;
   char check = 'Z';
 
@@ -202,7 +248,7 @@ void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
                             (Tzzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                             (Tzzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // Tzzの更新式
-  TzzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  TzzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->sa, aft_d->va, bef_d->sa, bef_d->va, ma_d, dif_d, ran_d);
   // 0 padding
   // ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
   // ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
@@ -211,151 +257,191 @@ void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tzz zero  : %s\n", cudaGetErrorString(err));
   // 全方向加算
-  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ip_d, ran_d, check);
+  DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->sa, ipa_d, ran_d, check);
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tzz add   : %s\n", cudaGetErrorString(err));
  
 }
 // 垂直応力計算(main呼び出し関数)
-void Sig(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Impulse *ip_d, Coord threads) {
-  Txx(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, ip_d, threads);
-  Tyy(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, ip_d, threads);
-  Tzz(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, ip_d, threads);
+void Sig(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, ImpulseArr *ipa_d, DimI3 threads) {
+  Txx(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, ipa_d, threads);
+  Tyy(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, ipa_d, threads);
+  Tzz(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, ipa_d, threads);
 }
 
 // せん断応力
 
 // せん断応力更新関数
-__global__ void TxyUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1; // 始点を+1
 
-  int imax = ran->tr.Txy.x, jmax = ran->tr.Txy.y, kmax = ran->tr.Txy.z;
+  // int imax = ran->tr.Txy.x, jmax = ran->tr.Txy.y, kmax = ran->tr.Txy.z;
   double Hzetadx, Hzetady, Hmu, Hgamma;
 
-  if (i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if (i < ran->tr.Txy.x - 1 && j < ran->tr.Txy.y - 1 && k < ran->tr.Txy.z - 1) {
     // 各インデックスの計算
-    int idx     = k * imax * jmax + j * imax + i;
-    int idx_i1  = k * imax * jmax + j * imax + (i - 1);
-    int idx_j1  = k * imax * jmax + (j - 1) * imax + i;
-    int idx_ij1 = k * imax * jmax + (j - 1) * imax + (i - 1);
+    // int idtxy = Dgetid<<<1,1>>>(ran->tr.Txy, i, j, k);
+
+    // int id   = Dgetid<<<1,1>>>(ran->sr.Txx, i, j, k);
+    // int idi  = Dgetid<<<1,1>>>(ran->sr.Txx, i - 1, j, k);
+    // int idj  = Dgetid<<<1,1>>>(ran->sr.Txx, i, j - 1, k);
+    // int idij = Dgetid<<<1,1>>>(ran->sr.Txx, i - 1, j - 1, k);
+
+    // int idvx  = Dgetid<<<1,1>>>(ran->vr.Vx, i, j, k);
+    // int idvxj = Dgetid<<<1,1>>>(ran->vr.Vx, i, j - 1, k);
+    // int idvy  = Dgetid<<<1,1>>>(ran->vr.Vy, i, j, k);
+    // int idvyi = Dgetid<<<1,1>>>(ran->vr.Vy, i - 1, j, k);
+    int idtxy = k * ran->tr.Txy.x * ran->tr.Txy.y + j * ran->tr.Txy.x + i;
+
+    int id = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+    int idi = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + (i - 1);
+    int idj = k * ran->sr.Txx.x * ran->sr.Txx.y + (j - 1) * ran->sr.Txx.x + i;
+    int idij = k * ran->sr.Txx.x * ran->sr.Txx.y + (j - 1) * ran->sr.Txx.x + (i - 1);
+
+    int idvx  = k * ran->vr.Vx.x * ran->vr.Vx.y + j * ran->vr.Vx.x + i;
+    int idvxj = k * ran->vr.Vx.x * ran->vr.Vx.y + (j - 1) * ran->vr.Vx.x + i;
+    int idvy  = k * ran->vr.Vy.x * ran->vr.Vy.y + j * ran->vr.Vy.x + i;
+    int idvyi = k * ran->vr.Vy.x * ran->vr.Vy.y + j * ran->vr.Vy.x + (i - 1);
+
 
     // PML:減衰係数,計算領域:摩擦定数
-    Hzetadx = 4. * pow((1. / ma->zetadx[idx_i1]) + (1. / ma->zetadx[idx_j1]) + (1. / ma->zetadx[idx_ij1]) + (1. / ma->zetadx[idx]), -1.);
-    Hzetady = 4. * pow((1. / ma->zetady[idx_i1]) + (1. / ma->zetady[idx_j1]) + (1. / ma->zetady[idx_ij1]) + (1. / ma->zetady[idx]), -1.);
+    Hzetadx = 4. * pow((1. / ma[id].zetadx) + (1. / ma[idi].zetadx) + (1. / ma[idj].zetadx) + (1. / ma[idij].zetadx), -1.);
+    Hzetady = 4. * pow((1. / ma[id].zetady) + (1. / ma[idi].zetady) + (1. / ma[idj].zetady) + (1. / ma[idij].zetady), -1.);
     // 第2ラメ，横弾性係数(剛性率)
-    Hmu = 4. * pow((1. / ma->mu[idx_i1]) + (1. / ma->mu[idx_j1]) + (1. / ma->mu[idx_ij1]) + (1. / ma->mu[idx]), -1.);
+    Hmu = 4. * pow((1. / ma[id].mu) + (1. / ma[idi].mu) + (1. / ma[idj].mu) + (1. / ma[idij].mu), -1.);
     // 第1粘性定数
-    Hgamma = 4. * pow((1. / ma->gamma[idx_i1]) + (1. / ma->gamma[idx_j1]) + (1. / ma->gamma[idx_ij1]) + (1. / ma->gamma[idx]), -1.);
+    Hgamma = 4. * pow((1. / ma[id].gamma) + (1. / ma[idi].gamma) + (1. / ma[idj].gamma) + (1. / ma[idij].gamma), -1.);
 
 
-    aft->ta.Txyx[idx] = (2.0 - Hzetadx * dif->dt) / (2.0 + Hzetadx * dif->dt) * bef->ta.Txyx[idx]
-        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadx * dif->dt) * (aft->va.Vy[idx] - aft->va.Vy[idx_i1]) / dif->dx
-        - 2.0 * Hgamma / (2.0 + Hzetadx * dif->dt) * (bef->va.Vy[idx] - bef->va.Vy[idx_i1]) / dif->dx;
+    aftta.Txyx[idtxy] = (2.0 - Hzetadx * dif->dt) / (2.0 + Hzetadx * dif->dt) * befta.Txyx[idtxy]
+        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadx * dif->dt) * (aftva.Vy[idvy] - aftva.Vy[idvyi]) / dif->dx
+        - 2.0 * Hgamma / (2.0 + Hzetadx * dif->dt) * (befva.Vy[idvy] - befva.Vy[idvyi]) / dif->dx;
 
-    aft->ta.Txyy[idx] = (2.0 - Hzetady * dif->dt) / (2.0 + Hzetady * dif->dt) * bef->ta.Txyy[idx]
-        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetady * dif->dt) * (aft->va.Vx[idx] - aft->va.Vx[idx_j1]) / dif->dy
-        - 2.0 * Hgamma / (2.0 + Hzetady * dif->dt) * (bef->va.Vx[idx] - bef->va.Vx[idx_j1]) / dif->dy;
+    aftta.Txyy[idtxy] = (2.0 - Hzetady * dif->dt) / (2.0 + Hzetady * dif->dt) * befta.Txyy[idtxy]
+        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetady * dif->dt) * (aftva.Vx[idvx] - aftva.Vx[idvxj]) / dif->dy
+        - 2.0 * Hgamma / (2.0 + Hzetady * dif->dt) * (befva.Vx[idvx] - befva.Vx[idvxj]) / dif->dy;
   }
 }
+
 // せん断応力更新関数
-__global__ void TyzUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void TyzUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
-  int imax = ran->tr.Tyz.x, jmax = ran->tr.Tyz.y, kmax = ran->tr.Tyz.z;
+  // int imax = ran->tr.Tyz.x, jmax = ran->tr.Tyz.y, kmax = ran->tr.Tyz.z;
   double Hzetady, Hzetadz, Hmu, Hgamma;
 
-  if (i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if (i < ran->tr.Tyz.x - 1 && j < ran->tr.Tyz.y - 1 && k < ran->tr.Tyz.z - 1) {
     // 各インデックスの計算
-    int idx      = k * imax * jmax + j * imax + i;
-    int idx_j1  = k * imax * jmax + (j - 1) * imax + i;
-    int idx_k1  = (k - 1) * imax * jmax + j * imax + i;
-    int idx_jk1 = (k - 1) * jmax * kmax + (j - 1) * kmax + i;
+    // int idtyz = Dgetid<<<1,1>>>(ran->tr.Tyz, i, j, k);
+
+    // int id   = Dgetid<<<1,1>>>(ran->sr.Txx, i, j, k);
+    // int idj  = Dgetid<<<1,1>>>(ran->sr.Txx, i, j - 1, k);
+    // int idk  = Dgetid<<<1,1>>>(ran->sr.Txx, i, j, k - 1);
+    // int idjk = Dgetid<<<1,1>>>(ran->sr.Txx, i, j - 1, k - 1);
+
+    // int idvy  = Dgetid<<<1,1>>>(ran->vr.Vy, i, j, k);
+    // int idvyk = Dgetid<<<1,1>>>(ran->vr.Vy, i, j, k - 1);
+    // int idvz  = Dgetid<<<1,1>>>(ran->vr.Vz, i, j, k);
+    // int idvzj = Dgetid<<<1,1>>>(ran->vr.Vz, i, j - 1, k);
+    int idtyz = k * ran->tr.Tyz.x * ran->tr.Tyz.y + j * ran->tr.Tyz.x + i;
+
+    int id = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+    int idj = k * ran->sr.Txx.x * ran->sr.Txx.y + (j - 1) * ran->sr.Txx.x + i;
+    int idk = (k - 1) * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+    int idjk = (k - 1) * ran->sr.Txx.x * ran->sr.Txx.y + (j - 1) * ran->sr.Txx.x + i;
+
+    int idvy = k * ran->vr.Vy.x * ran->vr.Vy.y + j * ran->vr.Vy.x + i;
+    int idvyk = (k - 1) * ran->vr.Vy.x * ran->vr.Vy.y + j * ran->vr.Vy.x + i;
+    int idvz = k * ran->vr.Vz.x * ran->vr.Vz.y + j * ran->vr.Vz.x + i;
+    int idvzj = k * ran->vr.Vz.x * ran->vr.Vz.y + (j - 1) * ran->vr.Vz.x + i;
+
 
     // PML:減衰係数,計算領域:摩擦定数
-    Hzetady = 4. * pow((1. / ma->zetady[idx_jk1]) + (1. / ma->zetady[idx_j1]) + (1. / ma->zetady[idx_k1]) + (1. / ma->zetady[idx]), -1.);
-    Hzetadz = 4. * pow((1. / ma->zetadz[idx_jk1]) + (1. / ma->zetadz[idx_j1]) + (1. / ma->zetadz[idx_k1]) + (1. / ma->zetadz[idx]), -1.);
+    Hzetady = 4. * pow((1. / ma[id].zetady) + (1. / ma[idj].zetady) + (1. / ma[idk].zetady) + (1. / ma[idjk].zetady), -1.);
+    Hzetadz = 4. * pow((1. / ma[id].zetadz) + (1. / ma[idj].zetadz) + (1. / ma[idk].zetadz) + (1. / ma[idjk].zetadz), -1.);
     // 第2ラメ，横弾性係数(剛性率)
-    Hmu = 4. * pow((1. / ma->mu[idx_jk1]) + (1. / ma->mu[idx_j1]) + (1. / ma->mu[idx_k1]) + (1. / ma->mu[idx]), -1.);
+    Hmu = 4. * pow((1. / ma[id].mu) + (1. / ma[idj].mu) + (1. / ma[idk].mu) + (1. / ma[idjk].mu), -1.);
     // 第1粘性定数
-    Hgamma = 4. * pow((1. / ma->gamma[idx_jk1]) + (1. / ma->gamma[idx_j1]) + (1. / ma->gamma[idx_k1]) + (1. / ma->gamma[idx]), -1.);
+    Hgamma = 4. * pow((1. / ma[id].gamma) + (1. / ma[idj].gamma) + (1. / ma[idk].gamma) + (1. / ma[idjk].gamma), -1.);
 
-    aft->ta.Tyzy[idx] = (2.0 - Hzetady * dif->dt) / (2.0 + Hzetady * dif->dt) * bef->ta.Tyzy[idx]
-        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetady * dif->dt) * (aft->va.Vz[idx] - aft->va.Vz[idx_j1]) / dif->dy
-        - 2.0 * Hgamma / (2.0 + Hzetady * dif->dt) * (bef->va.Vz[idx] - bef->va.Vz[idx_j1]) / dif->dy;
+    aftta.Tyzy[idtyz] = (2.0 - Hzetady * dif->dt) / (2.0 + Hzetady * dif->dt) * befta.Tyzy[idtyz]
+        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetady * dif->dt) * (aftva.Vz[idvz] - aftva.Vz[idvzj]) / dif->dy
+        - 2.0 * Hgamma / (2.0 + Hzetady * dif->dt) * (befva.Vz[idvz] - befva.Vz[idvzj]) / dif->dy;
 
-    aft->ta.Tyzz[idx] = (2.0 - Hzetadz * dif->dt) / (2.0 + Hzetadz * dif->dt) * bef->ta.Tyzz[idx]
-        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadz * dif->dt) * (aft->va.Vy[idx] - aft->va.Vy[idx_k1]) / dif->dz
-        - 2.0 * Hgamma / (2.0 + Hzetadz * dif->dt) * (bef->va.Vy[idx] - bef->va.Vy[idx_k1]) / dif->dz;
-
+    aftta.Tyzz[idtyz] = (2.0 - Hzetadz * dif->dt) / (2.0 + Hzetadz * dif->dt) * befta.Tyzz[idtyz]
+        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadz * dif->dt) * (aftva.Vy[idvy] - aftva.Vy[idvyk]) / dif->dz
+        - 2.0 * Hgamma / (2.0 + Hzetadz * dif->dt) * (befva.Vy[idvy] - befva.Vy[idvyk]) / dif->dz;
   }
 }
+
 // せん断応力更新関数
-__global__ void TzxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void TzxUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
-  int imax = ran->tr.Tzx.x, jmax = ran->tr.Tzx.y, kmax = ran->tr.Tzx.z;
   double Hzetadx, Hzetadz, Hmu, Hgamma;
 
-  if (i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if (i < ran->tr.Tzx.x - 1 && j < ran->tr.Tzx.y - 1 && k < ran->tr.Tzx.z - 1) {
     // 各インデックスの計算
-    int idx      = k * imax * jmax + j * imax + i;
-    int idx_i1  = k * imax * jmax + j * imax + (i - 1);
-    int idx_k1  = (k - 1) * imax * jmax + j * imax + i;
-    int idx_ki1 = (k - 1) * imax * imax + j * imax + (i - 1);
+    // 求めるTzx
+    int idtzx  = k * ran->tr.Tzx.x * ran->tr.Tzx.y + j * ran->tr.Tzx.x + i;
+    // 格子点
+    int id     = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+    int idi    = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + (i - 1);
+    int idk    = (k - 1) * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+    int idki   = (k - 1) * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + (i - 1);
+    // 速度点
+    int idvx   = k * ran->vr.Vx.x * ran->vr.Vx.y + j * ran->vr.Vx.x + i;
+    int idvxk  = (k - 1) * ran->vr.Vx.x * ran->vr.Vx.y + j * ran->vr.Vx.x + i;
+    int idvz   = k * ran->vr.Vz.x * ran->vr.Vz.y + j * ran->vr.Vz.x + i;
+    int idvzi  = k * ran->vr.Vz.x * ran->vr.Vz.y + j * ran->vr.Vz.x + (i - 1);
 
     // PML:減衰係数,計算領域:摩擦定数
-    Hzetadx = 4. * pow((1. / ma->zetadx[idx_ki1]) + (1. / ma->zetadx[idx_i1]) + (1. / ma->zetadx[idx_k1]) + (1. / ma->zetadx[idx]), -1.);
-    Hzetadz = 4. * pow((1. / ma->zetadz[idx_ki1]) + (1. / ma->zetadz[idx_i1]) + (1. / ma->zetadz[idx_k1]) + (1. / ma->zetadz[idx]), -1.);
+    Hzetadx = 4. * pow((1. / ma[id].zetadx) + (1. / ma[idi].zetadx) + (1. / ma[idk].zetadx) + (1. / ma[idki].zetadx), -1.);
+    Hzetadz = 4. * pow((1. / ma[id].zetadz) + (1. / ma[idi].zetadz) + (1. / ma[idk].zetadz) + (1. / ma[idki].zetadz), -1.);
     // 第2ラメ，横弾性係数(剛性率)
-    Hmu = 4. * pow((1. / ma->mu[idx_ki1]) + (1. / ma->mu[idx_i1]) + (1. / ma->mu[idx_k1]) + (1. / ma->mu[idx]), -1.);
+    Hmu = 4. * pow((1. / ma[id].mu) + (1. / ma[idi].mu) + (1. / ma[idk].mu) + (1. / ma[idki].mu), -1.);
     // 第1粘性定数
-    Hgamma = 4. * pow((1. / ma->gamma[idx_ki1]) + (1. / ma->gamma[idx_i1]) + (1. / ma->gamma[idx_k1]) + (1. / ma->gamma[idx]), -1.);
+    Hgamma = 4. * pow((1. / ma[id].gamma) + (1. / ma[idi].gamma) + (1. / ma[idk].gamma) + (1. / ma[idki].gamma), -1.);
 
+    aftta.Tzxz[idtzx] = (2.0 - Hzetadz * dif->dt) / (2.0 + Hzetadz * dif->dt) * befta.Tzxz[idtzx]
+        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadz * dif->dt) * (aftva.Vx[idvx] - aftva.Vx[idvxk]) / dif->dz
+        - 2.0 * Hgamma / (2.0 + Hzetadz * dif->dt) * (befva.Vx[idvx] - befva.Vx[idvxk]) / dif->dz;
 
-    aft->ta.Tzxz[idx] = (2.0 - Hzetadz * dif->dt) / (2.0 + Hzetadz * dif->dt) * bef->ta.Tzxz[idx]
-        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadz * dif->dt) * (aft->va.Vx[idx] - aft->va.Vx[idx_k1]) / dif->dz
-        - 2.0 * Hgamma / (2.0 + Hzetadz * dif->dt) * (bef->va.Vx[idx] - bef->va.Vx[idx_k1]) / dif->dz;
-
-    aft->ta.Tzxx[idx] = (2.0 - Hzetadx * dif->dt) / (2.0 + Hzetadx * dif->dt) * bef->ta.Tzxx[idx]
-        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadx * dif->dt) * (aft->va.Vz[idx] - aft->va.Vz[idx_i1]) / dif->dx
-        - 2.0 * Hgamma / (2.0 + Hzetadx * dif->dt) * (bef->va.Vz[idx] - bef->va.Vz[idx_i1]) / dif->dx;
+    aftta.Tzxx[idtzx] = (2.0 - Hzetadx * dif->dt) / (2.0 + Hzetadx * dif->dt) * befta.Tzxx[idtzx]
+        + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadx * dif->dt) * (aftva.Vz[idvz] - aftva.Vz[idvzi]) / dif->dx
+        - 2.0 * Hgamma / (2.0 + Hzetadx * dif->dt) * (befva.Vz[idvz] - befva.Vz[idvzi]) / dif->dx;
 
   }
 }
 
-__global__ void DirectionalAddT(BefAft *aft, Range *ran, char check) {
+__global__ void DirectionalAddT(TauArr aftta, Range *ran, char check) {
   // スレッドインデックスの計算
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
 
-  int imax = ran->tr.Txy.x, jmax = ran->tr.Txy.y, kmax = ran->tr.Txy.z;
-
-  if (i < imax && j < jmax && k < kmax) {
-    int idx = k * imax * jmax + j * imax + i;
-
-    if (check == 'X') {
-        aft->ta.Tyz[idx] = aft->ta.Tyzy[idx] + aft->ta.Tyzz[idx];
-    } else if (check == 'Y') {
-        aft->ta.Tzx[idx] = aft->ta.Tzxx[idx] + aft->ta.Tzxz[idx];
-    } else if (check == 'Z') {
-        aft->ta.Txy[idx] = aft->ta.Txyx[idx] + aft->ta.Txyy[idx];
-    } else {
-        printf("error: DirectionalAddT");
-    }
-
+  int id;
+  if (check == 'X' && i < ran->tr.Tyz.x && j < ran->tr.Tyz.y && k < ran->tr.Tyz.z) {
+    id = k * ran->tr.Tyz.x * ran->tr.Tyz.y + j * ran->tr.Tyz.x + i;
+    aftta.Tyz[id] = aftta.Tyzy[id] + aftta.Tyzz[id];
+  } else if (check == 'Y' && i < ran->tr.Tzx.x && j < ran->tr.Tzx.y && k < ran->tr.Tzx.z) {
+    id = k * ran->tr.Tzx.x * ran->tr.Tzx.y + j * ran->tr.Tzx.x + i;
+    aftta.Tzx[id] = aftta.Tzxx[id] + aftta.Tzxz[id];
+  } else if (check == 'Z' && i < ran->tr.Txy.x && j < ran->tr.Txy.y && k < ran->tr.Txy.z) {
+    id = k * ran->tr.Txy.x * ran->tr.Txy.y + j * ran->tr.Txy.x + i;
+    aftta.Txy[id] = aftta.Txyx[id] + aftta.Txyy[id];
   }
 }
 
 // Txyクラス的な
-void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
   // cudaError_t err;
   int Txyimax = ran_h->tr.Txy.x, Txyjmax = ran_h->tr.Txy.y, Txykmax = ran_h->tr.Txy.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -366,7 +452,7 @@ void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   dim3 DirectionalAddBlocks((Txyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Txyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                             (Txykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                    
-  TxyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  TxyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->ta, aft_d->va, bef_d->ta, bef_d->va, ma_d, dif_d, ran_d);
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Txy update: %s\n", cudaGetErrorString(err));
   // ZeroTxy<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d);
@@ -374,14 +460,14 @@ void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Txy zero  : %s\n", cudaGetErrorString(err));
-  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran_d, 'Z');
+  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->ta, ran_d, 'Z');
   cudaDeviceSynchronize();
 
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Txy add   : %s\n", cudaGetErrorString(err));
 }
 // Tyzクラス的な
-void Tyz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Tyz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
   // cudaError_t err;
   int Tyzimax = ran_h->tr.Tyz.x, Tyzjmax = ran_h->tr.Tyz.y, Tyzkmax = ran_h->tr.Tyz.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -392,20 +478,20 @@ void Tyz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   dim3 DirectionalAddBlocks((Tyzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Tyzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                             (Tyzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                    
-  TyzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  TyzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->ta, aft_d->va, bef_d->ta, bef_d->va, ma_d, dif_d, ran_d);
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tyz update: %s\n", cudaGetErrorString(err));
   // ZeroTyz<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d);
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tyz zero  : %s\n", cudaGetErrorString(err));
-  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran_d, 'X');
+  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->ta, ran_d, 'X');
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tyz add   : %s\n", cudaGetErrorString(err));
 }
 // Tzxクラス的な
-void Tzx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Tzx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
   // cudaError_t err;
   int Tzximax = ran_h->tr.Tzx.x, Tzxjmax = ran_h->tr.Tzx.y, Tzxkmax = ran_h->tr.Tzx.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
@@ -416,21 +502,21 @@ void Tzx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   dim3 DirectionalAddBlocks((Tzximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Tzxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
                             (Tzxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                  
-  TzxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  TzxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->ta, aft_d->va, bef_d->ta, bef_d->va, ma_d, dif_d, ran_d);
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tzx update: %s\n", cudaGetErrorString(err));
   // ZeroTzx<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran_d);
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tzx zero  : %s\n", cudaGetErrorString(err));
-  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran_d, 'Y');
+  DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->ta, ran_d, 'Y');
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Tzx add   : %s\n", cudaGetErrorString(err));
 
 }
 // せん断応力計算(main呼び出し関数)
-void Tau(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Tau(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
   Txy(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, threads);
   Tyz(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, threads);
   Tzx(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, threads);
@@ -439,132 +525,145 @@ void Tau(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 // 粒子速度
 
 // 粒子速度更新関数
-__global__ void VxUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void VxUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
-  int imax = ran->vr.Vx.x, jmax = ran->vr.Vx.y, kmax = ran->vr.Vx.z;
+
   double Azetaxx, Azetaxy, Azetaxz, Arho;
-  // printf("%d,%d,%d\n", imax ,jmax ,kmax);
 
+  if(i < ran->vr.Vx.x - 1 && j < ran->vr.Vx.y - 1 && k < ran->vr.Vx.z - 1) {
 
-  if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
-    // 1D indexing for 3D arrays
-    // printf("ok\n");
-    int idx    = k * imax * jmax + j * imax + i;
-    int idx_i1 = k * imax * jmax + j * imax + (i - 1);
-    int idx_j1 = k * imax * jmax + (j + 1) * imax + i;
-    int idx_k1 = (k + 1) * imax * jmax + j * imax + i;
+    int idvx   = k * ran->vr.Vx.x * ran->vr.Vx.y + j * ran->vr.Vx.x + i;
+    int idtxx  = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+    int idtxxi = k * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + (i - 1);
+    int idtxy  = k * ran->tr.Txy.x * ran->tr.Txy.y + j * ran->tr.Txy.x + i;
+    int idtxyj = k * ran->tr.Txy.x * ran->tr.Txy.y + (j + 1) * ran->tr.Txy.x + i;
+    int idtzx  = k * ran->tr.Tzx.x * ran->tr.Tzx.y + j * ran->tr.Tzx.x + i;
+    int idtzxk = (k + 1) * ran->tr.Tzx.x * ran->tr.Tzx.y + j * ran->tr.Tzx.x + i;
+    // printf("%d,%d,%d\n", ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
+    // if(ma[idtxx].rho == 1.205 && k > 10) printf("%d, %d, %d\n", i, j, k);
+    Azetaxx = (ma[idtxx].zetaxx + ma[idtxxi].zetaxx) / 2.0;
+    Azetaxy = (ma[idtxx].zetaxy + ma[idtxxi].zetaxy) / 2.0;
+    Azetaxz = (ma[idtxx].zetaxz + ma[idtxxi].zetaxz) / 2.0;
+    Arho    = (ma[idtxx].rho + ma[idtxxi].rho) / 2.0;
+    // if((2.0 * Arho + Azetaxx * dif->dt) == 0) {
+    //   printf("%d, %d, %d\n", i, j, k);
+    // }
+    aftva.Vxx[idvx] = (2.0 * Arho - Azetaxx * dif->dt) / (2.0 * Arho + Azetaxx * dif->dt) * befva.Vxx[idvx]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetaxx * dif->dt) * (befsa.Txx[idtxx] - befsa.Txx[idtxxi]) / dif->dx;
 
-    Azetaxx = (ma->zetaxx[idx_i1] + ma->zetaxx[idx]) / 2.;
-    Azetaxy = (ma->zetaxy[idx_i1] + ma->zetaxy[idx]) / 2.;
-    Azetaxz = (ma->zetaxz[idx_i1] + ma->zetaxz[idx]) / 2.;
-    Arho    = (ma->rho[idx_i1] + ma->rho[idx]) / 2.;
+    aftva.Vxy[idvx] = (2.0 * Arho - Azetaxy * dif->dt) / (2.0 * Arho + Azetaxy * dif->dt) * befva.Vxy[idvx]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetaxy * dif->dt) * (befta.Txy[idtxyj] - befta.Txy[idtxy]) / dif->dy;
 
-    aft->va.Vxx[idx] = (2. * Arho - Azetaxx * dif->dt) / (2. * Arho + Azetaxx * dif->dt) * bef->va.Vxx[idx]
-        + 2. * dif->dt / (2. * Arho + Azetaxx * dif->dt) * (bef->sa.Txx[idx] - bef->sa.Txx[idx_i1]) / dif->dx;
-
-    aft->va.Vxy[idx] = (2. * Arho - Azetaxy * dif->dt) / (2. * Arho + Azetaxy * dif->dt) * bef->va.Vxy[idx]
-        + 2. * dif->dt / (2. * Arho + Azetaxy * dif->dt) * (bef->ta.Txy[idx_j1] - bef->ta.Txy[idx]) / dif->dy;
-
-    aft->va.Vxz[idx] = (2. * Arho - Azetaxz * dif->dt) / (2. * Arho + Azetaxz * dif->dt) * bef->va.Vxz[idx]
-        + 2. * dif->dt / (2. * Arho + Azetaxz * dif->dt) * (bef->ta.Tzx[idx_k1] - bef->ta.Tzx[idx]) / dif->dz;
-
+    aftva.Vxz[idvx] = (2.0 * Arho - Azetaxz * dif->dt) / (2.0 * Arho + Azetaxz * dif->dt) * befva.Vxz[idvx]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetaxz * dif->dt) * (befta.Tzx[idtzxk] - befta.Tzx[idtzx]) / dif->dz;
   }
 }
+
 // 粒子速度更新関数
-__global__ void VyUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void VyUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
-  int imax = ran->vr.Vy.x, jmax = ran->vr.Vy.y, kmax = ran->vr.Vy.z;
+  // int imax = ran->vr.Vy.x, jmax = ran->vr.Vy.y, kmax = ran->vr.Vy.z;
+  // int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
   double Azetayx, Azetayy, Azetayz, Arho;
 
-  if (i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if (i < ran->vr.Vy.x - 1 && j < ran->vr.Vy.y - 1 && k < ran->vr.Vy.z - 1) {
     // 各インデックスの計算
-    int idx    = k * imax * jmax + j * imax + i;
-    int idx_i1 = k * imax * jmax + j * imax + (i + 1);
-    int idx_j1 = k * imax * jmax + (j - 1) * imax + i;
-    int idx_k1 = (k + 1) * imax * jmax + j * imax + i;
+    int idvy   = k * ran->vr.Vy.x * ran->vr.Vy.y + j * ran->vr.Vy.x + i;
+    int idtyy  = k * ran->sr.Tyy.x * ran->sr.Tyy.y + j * ran->sr.Tyy.x + i;
+    int idtyyj = k * ran->sr.Tyy.x * ran->sr.Tyy.y + (j - 1) * ran->sr.Tyy.x + i;
+    int idtxy  = k * ran->tr.Txy.x * ran->tr.Txy.y + j * ran->tr.Txy.x + i;
+    int idtxyi = k * ran->tr.Txy.x * ran->tr.Txy.y + j * ran->tr.Txy.x + (i + 1);
+    int idtyz  = k * ran->tr.Tyz.x * ran->tr.Tyz.y + j * ran->tr.Tyz.x + i;
+    int idtyzk = (k + 1) * ran->tr.Tyz.x * ran->tr.Tyz.y + j * ran->tr.Tyz.x + i;
+
 
     // 各種パラメータの計算
-    Azetayx = (ma->zetayx[idx_j1] + ma->zetayx[idx]) / 2.0;
-    Azetayy = (ma->zetayy[idx_j1] + ma->zetayy[idx]) / 2.0;
-    Azetayz = (ma->zetayz[idx_j1] + ma->zetayz[idx]) / 2.0;
-    Arho    = (ma->rho[idx_j1] + ma->rho[idx]) / 2.0;
+    Azetayx = (ma[idtyy].zetayx + ma[idtyyj].zetayx) / 2.0;
+    Azetayy = (ma[idtyy].zetayy + ma[idtyyj].zetayy) / 2.0;
+    Azetayz = (ma[idtyy].zetayz + ma[idtyyj].zetayz) / 2.0;
+    Arho    = (ma[idtyy].rho + ma[idtyyj].rho) / 2.0;
 
     // Vyxの更新
-    aft->va.Vyx[idx] = (2.0 * Arho - Azetayx * dif->dt) / (2.0 * Arho + Azetayx * dif->dt) * bef->va.Vyx[idx]
-        + 2.0 * dif->dt / (2.0 * Arho + Azetayx * dif->dt) * (bef->ta.Txy[idx_i1] - bef->ta.Txy[idx]) / dif->dx;
+    aftva.Vyx[idvy] = (2.0 * Arho - Azetayx * dif->dt) / (2.0 * Arho + Azetayx * dif->dt) * befva.Vyx[idvy]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetayx * dif->dt) * (befta.Txy[idtxyi] - befta.Txy[idtxy]) / dif->dx;
 
     // Vyyの更新
-    aft->va.Vyy[idx] = (2.0 * Arho - Azetayy * dif->dt) / (2.0 * Arho + Azetayy * dif->dt) * bef->va.Vyy[idx]
-        + 2.0 * dif->dt / (2.0 * Arho + Azetayy * dif->dt) * (bef->sa.Tyy[idx] - bef->sa.Tyy[idx_j1]) / dif->dy;
+    aftva.Vyy[idvy] = (2.0 * Arho - Azetayy * dif->dt) / (2.0 * Arho + Azetayy * dif->dt) * befva.Vyy[idvy]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetayy * dif->dt) * (befsa.Tyy[idtyy] - befsa.Tyy[idtyyj]) / dif->dy;
 
     // Vyzの更新
-    aft->va.Vyz[idx] = (2.0 * Arho - Azetayz * dif->dt) / (2.0 * Arho + Azetayz * dif->dt) * bef->va.Vyz[idx]
-        + 2.0 * dif->dt / (2.0 * Arho + Azetayz * dif->dt) * (bef->ta.Tyz[idx_k1] - bef->ta.Tyz[idx]) / dif->dz;
+    aftva.Vyz[idvy] = (2.0 * Arho - Azetayz * dif->dt) / (2.0 * Arho + Azetayz * dif->dt) * befva.Vyz[idvy]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetayz * dif->dt) * (befta.Tyz[idtyzk] - befta.Tyz[idtyz]) / dif->dz;
 
   }
 }
+
 // 粒子速度更新関数
-__global__ void VzUpdate(BefAft *aft, BefAft *bef, MedArr *ma, Diff *dif, Range *ran) {
+__global__ void VzUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
-  int imax = ran->vr.Vz.x, jmax = ran->vr.Vz.y, kmax = ran->vr.Vz.z;
+  // int imax = ran->vr.Vz.x, jmax = ran->vr.Vz.y, kmax = ran->vr.Vz.z;
+  // int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
+
   double Azetazx, Azetazy, Azetazz, Arho;
 
-  if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if(i < ran->vr.Vz.x - 1 && j < ran->vr.Vz.y - 1 && k < ran->vr.Vz.z - 1) {
     // 1D indexing for 3D arrays
-    int idx    = k * imax * jmax + j * imax + i;
-    int idx_i1 = k * imax * jmax + j * imax + (i + 1);
-    int idx_j1 = k * imax * jmax + (j + 1) * imax + i;
-    int idx_k1 = (k - 1) * imax * jmax + j * imax + i;
+    int idvz   = k * ran->vr.Vz.x * ran->vr.Vz.y + j * ran->vr.Vz.x + i;
+    int idtzz  = k * ran->sr.Tzz.x * ran->sr.Tzz.y + j * ran->sr.Tzz.x + i;
+    int idtzzk = (k - 1) * ran->sr.Tzz.x * ran->sr.Tzz.y + j * ran->sr.Tzz.x + i;
+    int idtyz  = k * ran->tr.Tyz.x * ran->tr.Tyz.y + j * ran->tr.Tyz.x + i;
+    int idtyzj = k * ran->tr.Tyz.x * ran->tr.Tyz.y + (j + 1) * ran->tr.Tyz.x + i;
+    int idtzx  = k * ran->tr.Tzx.x * ran->tr.Tzx.y + j * ran->tr.Tzx.x + i;
+    int idtzxi = k * ran->tr.Tzx.x * ran->tr.Tzx.y + j * ran->tr.Tzx.x + (i + 1);
 
-    Azetazx = (ma->zetazx[idx_k1] + ma->zetazx[idx]) / 2.;
-    Azetazy = (ma->zetazy[idx_k1] + ma->zetazy[idx]) / 2.;
-    Azetazz = (ma->zetazz[idx_k1] + ma->zetazz[idx]) / 2.;
-    Arho    = (ma->rho[idx_k1] + ma->rho[idx]) / 2.;
-    aft->va.Vzx[idx] = (2. * Arho - Azetazx * dif->dt) / (2. * Arho + Azetazx * dif->dt) * bef->va.Vzx[idx]
-        + 2. * dif->dt / (2. * Arho + Azetazx * dif->dt) * (bef->ta.Tzx[idx_i1] - bef->ta.Tzx[idx]) / dif->dx;
+    Azetazx = (ma[idtzz].zetazx + ma[idtzzk].zetazx) / 2.0;
+    Azetazy = (ma[idtzz].zetazy + ma[idtzzk].zetazy) / 2.0;
+    Azetazz = (ma[idtzz].zetazz + ma[idtzzk].zetazz) / 2.0;
+    Arho    = (ma[idtzz].rho + ma[idtzzk].rho) / 2.0;
 
-    aft->va.Vzy[idx] = (2. * Arho - Azetazy * dif->dt) / (2. * Arho + Azetazy * dif->dt) * bef->va.Vzy[idx]
-        + 2. * dif->dt / (2. * Arho + Azetazy * dif->dt) * (bef->ta.Tyz[idx_j1] - bef->ta.Tyz[idx]) / dif->dy;
+    aftva.Vzx[idvz] = (2.0 * Arho - Azetazx * dif->dt) / (2.0 * Arho + Azetazx * dif->dt) * befva.Vzx[idvz]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetazx * dif->dt) * (befta.Tzx[idtzxi] - befta.Tzx[idtzx]) / dif->dx;
 
-    aft->va.Vzz[idx] = (2. * Arho - Azetazz * dif->dt) / (2. * Arho + Azetazz * dif->dt) * bef->va.Vzz[idx]
-        + 2. * dif->dt / (2. * Arho + Azetazz * dif->dt) * (bef->sa.Tzz[idx] - bef->sa.Tzz[idx_k1]) / dif->dz;
+    aftva.Vzy[idvz] = (2.0 * Arho - Azetazy * dif->dt) / (2.0 * Arho + Azetazy * dif->dt) * befva.Vzy[idvz]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetazy * dif->dt) * (befta.Tyz[idtyzj] - befta.Tyz[idtyz]) / dif->dy;
+
+    aftva.Vzz[idvz] = (2.0 * Arho - Azetazz * dif->dt) / (2.0 * Arho + Azetazz * dif->dt) * befva.Vzz[idvz]
+        + 2.0 * dif->dt / (2.0 * Arho + Azetazz * dif->dt) * (befsa.Tzz[idtzz] - befsa.Tzz[idtzzk]) / dif->dz;
   }
 }
 
-__global__ void DirectionalAddV(BefAft *aft, Range *ran, char check) {
+
+__global__ void DirectionalAddV(VelArr aftva, Range *ran, char check) {
   // スレッドインデックスの計算
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
 
-  int imax = ran->vr.Vx.x, jmax = ran->vr.Vx.y, kmax = ran->vr.Vx.z;
+  int id;
 
-
-  if (i < imax && j < jmax && k < kmax) {
-    int idx = k * imax * jmax + j * imax + i;
-
-    if (check == 'X') {
-        aft->va.Vx[idx] = aft->va.Vxx[idx] + aft->va.Vxy[idx] + aft->va.Vxz[idx];
-    } else if (check == 'Y') {
-        aft->va.Vy[idx] = aft->va.Vyx[idx] + aft->va.Vyy[idx] + aft->va.Vyz[idx];
-    } else if (check == 'Z') {
-        aft->va.Vz[idx] = aft->va.Vzx[idx] + aft->va.Vzy[idx] + aft->va.Vzz[idx];
-    } else {
-      printf("error: DirectionalAddV");
-    }
+  if (check == 'X' && i < ran->vr.Vx.x && j < ran->vr.Vx.y && k < ran->vr.Vx.z) {
+    id = k * ran->vr.Vx.x * ran->vr.Vx.y + j * ran->vr.Vx.x + i; 
+    aftva.Vx[id] = aftva.Vxx[id] + aftva.Vxy[id] + aftva.Vxz[id];
+  } else if (check == 'Y' && i < ran->vr.Vx.x && j < ran->vr.Vx.y && k < ran->vr.Vx.z) {
+    id = k * ran->vr.Vy.x * ran->vr.Vy.y + j * ran->vr.Vy.x + i; 
+    aftva.Vy[id] = aftva.Vyx[id] + aftva.Vyy[id] + aftva.Vyz[id];
+  } else if (check == 'Z' && i < ran->vr.Vx.x && j < ran->vr.Vx.y && k < ran->vr.Vx.z) {
+    id = k * ran->vr.Vz.x * ran->vr.Vz.y + j * ran->vr.Vz.x + i; 
+    aftva.Vz[id] = aftva.Vzx[id] + aftva.Vzy[id] + aftva.Vzz[id];
   }
+  
 }
 
 // Vxクラス的な
-void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
   int Vximax = ran_h->vr.Vx.x, Vxjmax = ran_h->vr.Vx.y, Vxkmax = ran_h->vr.Vx.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Vximax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -577,7 +676,7 @@ void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   dim3 DirectionalAddBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Vxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
                             (Vxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  VxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  VxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->va, bef_d->va, bef_d->sa, bef_d->ta, ma_d, dif_d, ran_d);
   // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vx  update: %s\n", cudaGetErrorString(err));
   // ZeroVx_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d);
@@ -586,14 +685,14 @@ void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   cudaDeviceSynchronize();
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vx  zero  : %s\n", cudaGetErrorString(err));
-  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran_d, 'X');
-  cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
+  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->va, ran_d, 'X');
+  // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vx  add   : %s\n", cudaGetErrorString(err));
+  cudaDeviceSynchronize();
 
 }
 // Vyクラス的な
-void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
 
   int Vyimax = ran_h->vr.Vy.x, Vyjmax = ran_h->vr.Vy.y, Vykmax = ran_h->vr.Vy.z;
 
@@ -608,7 +707,7 @@ void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   dim3 DirectionalAddBlocks((Vyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Vyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
                             (Vykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  VyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  VyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->va, bef_d->va, bef_d->sa, bef_d->ta, ma_d, dif_d, ran_d);
   // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vy  update: %s\n", cudaGetErrorString(err));
   // ZeroVy_YX<<<ZeroYXBlocks, threadsPerBlock>>>(aft_d, ran_d);
@@ -619,14 +718,14 @@ void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   // printf("CUDA kernel error Vy  zero  : %s\n", cudaGetErrorString(err));
 
   //全方向加算
-  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran_d, 'Y');
-  cudaDeviceSynchronize();
-  cudaGetLastError(); // カーネル呼び出し後にエラーチェック
+  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->va, ran_d, 'Y');
+  // cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vy  add   : %s\n", cudaGetErrorString(err));
-
+  cudaDeviceSynchronize();
 }
+
 // Vzクラス的な
-void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
 
   int Vzimax = ran_h->vr.Vz.x, Vzjmax = ran_h->vr.Vz.y, Vzkmax = ran_h->vr.Vz.z;
 
@@ -641,7 +740,7 @@ void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   dim3 DirectionalAddBlocks((Vzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Vzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
                             (Vzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                    
-  VzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d, bef_d, ma_d, dif_d, ran_d);
+  VzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->va, bef_d->va, bef_d->sa, bef_d->ta, ma_d, dif_d, ran_d);
 
   // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vz  update: %s\n", cudaGetErrorString(err));
@@ -652,35 +751,50 @@ void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vz  zero  : %s\n", cudaGetErrorString(err));
   //全方向加算
-  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d, ran_d, 'Z');
-  cudaDeviceSynchronize();
+  DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->va, ran_d, 'Z');
   // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
   // printf("CUDA kernel error Vz  add   : %s\n", cudaGetErrorString(err));
-
+  cudaDeviceSynchronize();
 }
 //粒子速度計算
-void Vel(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, Coord threads) {
+void Vel(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
   Vx(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, threads);
   Vy(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, threads);
   Vz(aft_d, bef_d, ma_d, dif_d, ran_d, ran_h, threads);
 }
 
+__global__ void Acceleration(DimD3 *acc, VelArr aftva, VelArr befva, Diff *dif, DimI3 *out, Range *ran, int outnum) {
+  for(int num = 0; num < outnum; num++) {
+    // printf("%lf\n", aftva.Vx[idx]);
+    int idvx  = out[num].z * ran->vr.Vx.x * ran->vr.Vx.y + out[num].y * ran->vr.Vx.x + out[num].x;
+    int idvxi = out[num].z * ran->vr.Vx.x * ran->vr.Vx.y + out[num].y * ran->vr.Vx.x + (out[num].x + 1);
+    int idvy  = out[num].z * ran->vr.Vy.x * ran->vr.Vy.y + out[num].y * ran->vr.Vy.x + out[num].x;
+    int idvyj = out[num].z * ran->vr.Vy.x * ran->vr.Vy.y + (out[num].y + 1) * ran->vr.Vy.x + out[num].x;
+    int idvz  = out[num].z * ran->vr.Vz.x * ran->vr.Vz.y + out[num].y * ran->vr.Vz.x + out[num].x;
+    int idvzk = (out[num].z + 1) * ran->vr.Vz.x * ran->vr.Vz.y + out[num].y * ran->vr.Vz.x + out[num].x;
+
+    acc[num].x = ((aftva.Vx[idvx] - befva.Vx[idvx]) / dif->dt + (aftva.Vx[idvxi] - befva.Vx[idvxi]) / dif->dt) / 2;
+    acc[num].y = ((aftva.Vy[idvy] - befva.Vy[idvy]) / dif->dt + (aftva.Vy[idvyj] - befva.Vy[idvyj]) / dif->dt) / 2;
+    acc[num].z = ((aftva.Vz[idvz] - befva.Vz[idvz]) / dif->dt + (aftva.Vz[idvzk] - befva.Vz[idvzk]) / dif->dt) / 2;
+  }
+}
+
 //更新
-__global__ void swapTxx(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapTxx(SigArr aftsa, SigArr befsa, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
   int Txximax = ran->sr.Txx.x, Txxjmax = ran->sr.Txx.y, Txxkmax = ran->sr.Txx.z;
   if (i < Txximax && j < Txxjmax && k < Txxkmax) {
     int idx_Txx = k * Txximax * Txxjmax + j * Txximax + i;
-    *(bef->sa.Txx  + idx_Txx) = *(aft->sa.Txx  + idx_Txx);
-    *(bef->sa.Txxx + idx_Txx) = *(aft->sa.Txxx + idx_Txx);
-    *(bef->sa.Txxy + idx_Txx) = *(aft->sa.Txxy + idx_Txx);
-    *(bef->sa.Txxz + idx_Txx) = *(aft->sa.Txxz + idx_Txx);
+    befsa.Txx[idx_Txx]  = aftsa.Txx[idx_Txx];
+    befsa.Txxx[idx_Txx] = aftsa.Txxx[idx_Txx];
+    befsa.Txxy[idx_Txx] = aftsa.Txxy[idx_Txx];
+    befsa.Txxz[idx_Txx] = aftsa.Txxz[idx_Txx];
   }
 }
 
-__global__ void swapTyy(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapTyy(SigArr aftsa, SigArr befsa, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
@@ -688,14 +802,14 @@ __global__ void swapTyy(BefAft *aft, BefAft *bef, Range *ran) {
   
   if (i < Tyyimax && j < Tyyjmax && k < Tyykmax) {
     int idx_Tyy = k * Tyyimax * Tyyjmax + j * Tyyimax + i;
-    *(bef->sa.Tyy  + idx_Tyy) = *(aft->sa.Tyy  + idx_Tyy);
-    *(bef->sa.Tyyx + idx_Tyy) = *(aft->sa.Tyyx + idx_Tyy);
-    *(bef->sa.Tyyy + idx_Tyy) = *(aft->sa.Tyyy + idx_Tyy);
-    *(bef->sa.Tyyz + idx_Tyy) = *(aft->sa.Tyyz + idx_Tyy);
+    befsa.Tyy[idx_Tyy]  = aftsa.Tyy[idx_Tyy];
+    befsa.Tyyx[idx_Tyy] = aftsa.Tyyx[idx_Tyy];
+    befsa.Tyyy[idx_Tyy] = aftsa.Tyyy[idx_Tyy];
+    befsa.Tyyz[idx_Tyy] = aftsa.Tyyz[idx_Tyy];
   }
 }
 
-__global__ void swapTzz(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapTzz(SigArr aftsa, SigArr befsa, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
@@ -703,14 +817,14 @@ __global__ void swapTzz(BefAft *aft, BefAft *bef, Range *ran) {
 
   if (i < Tzzimax && j < Tzzjmax && k < Tzzkmax) {
     int idx_Tzz = k * Tzzimax * Tzzjmax + j * Tzzimax + i;
-    *(bef->sa.Tzz  + idx_Tzz) = *(aft->sa.Tzz  + idx_Tzz);
-    *(bef->sa.Tzzx + idx_Tzz) = *(aft->sa.Tzzx + idx_Tzz);
-    *(bef->sa.Tzzy + idx_Tzz) = *(aft->sa.Tzzy + idx_Tzz);
-    *(bef->sa.Tzzz + idx_Tzz) = *(aft->sa.Tzzz + idx_Tzz);
+    befsa.Tzz [idx_Tzz] = aftsa.Tzz[idx_Tzz];
+    befsa.Tzzx[idx_Tzz] = aftsa.Tzzx[idx_Tzz];
+    befsa.Tzzy[idx_Tzz] = aftsa.Tzzy[idx_Tzz];
+    befsa.Tzzz[idx_Tzz] = aftsa.Tzzz[idx_Tzz];
   }
 }
 
-__global__ void swapTxy(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapTxy(TauArr aftta, TauArr befta, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
@@ -718,13 +832,13 @@ __global__ void swapTxy(BefAft *aft, BefAft *bef, Range *ran) {
 
   if (i < Txyimax && j < Txyjmax && k < Txykmax) {
     int idx_Txy = k * Txyimax * Txyjmax + j * Txyimax + i;
-    *(bef->ta.Txy  + idx_Txy) = *(aft->ta.Txy  + idx_Txy);
-    *(bef->ta.Txyx + idx_Txy) = *(aft->ta.Txyx + idx_Txy);
-    *(bef->ta.Txyy + idx_Txy) = *(aft->ta.Txyy + idx_Txy);
+    befta.Txy [idx_Txy] = aftta.Txy[idx_Txy];
+    befta.Txyx[idx_Txy] = aftta.Txyx[idx_Txy];
+    befta.Txyy[idx_Txy] = aftta.Txyy[idx_Txy];
   }
 }
 
-__global__ void swapTyz(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapTyz(TauArr aftta, TauArr befta, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
@@ -732,28 +846,27 @@ __global__ void swapTyz(BefAft *aft, BefAft *bef, Range *ran) {
 
   if (i < Tyzimax && j < Tyzjmax && k < Tyzkmax) {
     int idx_Tyz = k * Tyzimax * Tyzjmax + j * Tyzimax + i;
-    *(bef->ta.Tyz  + idx_Tyz) = *(aft->ta.Tyz  + idx_Tyz);
-    *(bef->ta.Tyzy + idx_Tyz) = *(aft->ta.Tyzy + idx_Tyz);
-    *(bef->ta.Tyzz + idx_Tyz) = *(aft->ta.Tyzz + idx_Tyz);
+    befta.Tyz [idx_Tyz] = aftta.Tyz[idx_Tyz];
+    befta.Tyzy[idx_Tyz] = aftta.Tyzy[idx_Tyz];
+    befta.Tyzz[idx_Tyz] = aftta.Tyzz[idx_Tyz];
   }
 }
 
-__global__ void swapTzx(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapTzx(TauArr aftta, TauArr befta, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
   int Tzximax = ran->tr.Tzx.x, Tzxjmax = ran->tr.Tzx.y, Tzxkmax = ran->tr.Tzx.z;
   
-
   if (i < Tzximax && j < Tzxjmax && k < Tzxkmax) {
     int idx_Tzx = k * Tzximax * Tzxjmax + j * Tzximax + i;
-    *(bef->ta.Tzx  + idx_Tzx) = *(aft->ta.Tzx  + idx_Tzx);
-    *(bef->ta.Tzxz + idx_Tzx) = *(aft->ta.Tzxz + idx_Tzx);
-    *(bef->ta.Tzxx + idx_Tzx) = *(aft->ta.Tzxx + idx_Tzx);
+    befta.Tzx [idx_Tzx] = aftta.Tzx[idx_Tzx];
+    befta.Tzxz[idx_Tzx] = aftta.Tzxz[idx_Tzx];
+    befta.Tzxx[idx_Tzx] = aftta.Tzxx[idx_Tzx];
   }
 }
 
-__global__ void swapVx(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapVx(VelArr aftva, VelArr befva, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
@@ -761,46 +874,44 @@ __global__ void swapVx(BefAft *aft, BefAft *bef, Range *ran) {
   
   if (i < Vximax && j < Vxjmax && k < Vxkmax) {
     int idx_Vx = k * Vximax * Vxjmax + j * Vximax + i;
-    *(bef->va.Vx  + idx_Vx) = *(aft->va.Vx  + idx_Vx);
-    *(bef->va.Vxx + idx_Vx) = *(aft->va.Vxx + idx_Vx);
-    *(bef->va.Vxy + idx_Vx) = *(aft->va.Vxy + idx_Vx);
-    *(bef->va.Vxz + idx_Vx) = *(aft->va.Vxz + idx_Vx);
+    befva.Vx [idx_Vx] = aftva.Vx[idx_Vx];
+    befva.Vxx[idx_Vx] = aftva.Vxx[idx_Vx];
+    befva.Vxy[idx_Vx] = aftva.Vxy[idx_Vx];
+    befva.Vxz[idx_Vx] = aftva.Vxz[idx_Vx];
   }
 }
 
-__global__ void swapVy(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapVy(VelArr aftva, VelArr befva, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
   int Vyimax = ran->vr.Vy.x, Vyjmax = ran->vr.Vy.y, Vykmax = ran->vr.Vy.z;
   
-
   if (i < Vyimax && j < Vyjmax && k < Vykmax) {
     int idx_Vy = k * Vyimax * Vyjmax + j * Vyimax + i;
-    *(bef->va.Vy  + idx_Vy) = *(aft->va.Vy  + idx_Vy);
-    *(bef->va.Vyx + idx_Vy) = *(aft->va.Vyx + idx_Vy);
-    *(bef->va.Vyy + idx_Vy) = *(aft->va.Vyy + idx_Vy);
-    *(bef->va.Vyz + idx_Vy) = *(aft->va.Vyz + idx_Vy);
+    befva.Vy [idx_Vy] = aftva.Vy[idx_Vy];
+    befva.Vyx[idx_Vy] = aftva.Vyx[idx_Vy];
+    befva.Vyy[idx_Vy] = aftva.Vyy[idx_Vy];
+    befva.Vyz[idx_Vy] = aftva.Vyz[idx_Vy];
   }
 }
 
-__global__ void swapVz(BefAft *aft, BefAft *bef, Range *ran) {
+__global__ void swapVz(VelArr aftva, VelArr befva, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z;
   int Vzimax = ran->vr.Vz.x, Vzjmax = ran->vr.Vz.y, Vzkmax = ran->vr.Vz.z;
   
-
   if (i < Vzimax && j < Vzjmax && k < Vzkmax) {
     int idx_Vz = k * Vzimax * Vzjmax + j * Vzimax + i;
-    *(bef->va.Vz  + idx_Vz) = *(aft->va.Vz  + idx_Vz);
-    *(bef->va.Vzx + idx_Vz) = *(aft->va.Vzx + idx_Vz);
-    *(bef->va.Vzy + idx_Vz) = *(aft->va.Vzy + idx_Vz);
-    *(bef->va.Vzz + idx_Vz) = *(aft->va.Vzz + idx_Vz);
+    befva.Vz [idx_Vz] = aftva.Vz[idx_Vz];
+    befva.Vzx[idx_Vz] = aftva.Vzx[idx_Vz];
+    befva.Vzy[idx_Vz] = aftva.Vzy[idx_Vz];
+    befva.Vzz[idx_Vz] = aftva.Vzz[idx_Vz];
   }
 }
 
-void swapBefAft(BefAft *aft, BefAft *bef, Range *ran_h, Range *ran_d, Coord threads) {
+void swapBefAft(BefAft *aft, BefAft *bef, Range *ran_h, Range *ran_d, DimI3 threads) {
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
   dim3 SwapTxxBlocks((ran_h->sr.Txx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
                      (ran_h->sr.Txx.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
@@ -829,14 +940,14 @@ void swapBefAft(BefAft *aft, BefAft *bef, Range *ran_h, Range *ran_d, Coord thre
   dim3  SwapVzBlocks((ran_h->vr.Vz.x  + threadsPerBlock.x - 1) / threadsPerBlock.x,
                      (ran_h->vr.Vz.y  + threadsPerBlock.y - 1) / threadsPerBlock.y,
                      (ran_h->vr.Vz.z  + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  swapTxx<<<SwapTxxBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapTyy<<<SwapTyyBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapTzz<<<SwapTzzBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapTxy<<<SwapTxyBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapTyz<<<SwapTyzBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapTzx<<<SwapTzxBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapVx<<<SwapVxBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapVy<<<SwapVyBlocks, threadsPerBlock>>>(aft, bef, ran_d);
-  swapVz<<<SwapVzBlocks, threadsPerBlock>>>(aft, bef, ran_d);
+  swapTxx<<<SwapTxxBlocks, threadsPerBlock>>>(aft->sa, bef->sa, ran_d);
+  swapTyy<<<SwapTyyBlocks, threadsPerBlock>>>(aft->sa, bef->sa, ran_d);
+  swapTzz<<<SwapTzzBlocks, threadsPerBlock>>>(aft->sa, bef->sa, ran_d);
+  swapTxy<<<SwapTxyBlocks, threadsPerBlock>>>(aft->ta, bef->ta, ran_d);
+  swapTyz<<<SwapTyzBlocks, threadsPerBlock>>>(aft->ta, bef->ta, ran_d);
+  swapTzx<<<SwapTzxBlocks, threadsPerBlock>>>(aft->ta, bef->ta, ran_d);
+  swapVx<<<SwapVxBlocks, threadsPerBlock>>>(aft->va, bef->va, ran_d);
+  swapVy<<<SwapVyBlocks, threadsPerBlock>>>(aft->va, bef->va, ran_d);
+  swapVz<<<SwapVzBlocks, threadsPerBlock>>>(aft->va, bef->va, ran_d);
   cudaDeviceSynchronize();
 }

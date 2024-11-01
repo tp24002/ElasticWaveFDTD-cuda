@@ -1,22 +1,22 @@
 #pragma once
 #include "./struct.h"
 // hostメモリ確保
-MedArr* allocateHostMedArr(Range *ran);
-Impulse* allocateHostImpulse(Range *ran);
-AccCoord* allocateHostAccCoord(int outNum);
-Coord* allocateHostCoord(int outNum);
+MedArr* allocateHostMedArr(Range ran);
+Impulse* allocateHostImpulse(int innum);
+DimI3* allocateHostDimI3(int outnum);
+DimD3* allocateHostDimD3(int outNum);
 // deviceメモリ確保
-BefAft* allocateDeviceBefAft(Range *ran);
-MedArr* allocateDeviceMedArr(Range *ran);
-Impulse* allocateDeviceImpulse(Range *ran);
-AccCoord* allocateDeviceAccCoord(int outNum);
-Coord* allocateDeviceCoord(int outNum);
+MedArr* allocateDeviceMedArr(Range ran);
+BefAft* allocateDeviceBefAft(Range ran);
+ImpulseArr* allocateDeviceImpulseArr(Range ran);
+Impulse* allocateDeviceImpulse(int innum);
+DimI3* allocateDeviceDimI3(int outNum);
+DimD3* allocateDeviceDimD3(int outNum);
 // データ転送 ホスト->デバイス
-void MedArrHostToDevice(MedArr *ma_h, MedArr *ma_d, Range ran);
-void ImpulseHostToDevice(Impulse *ip_h, Impulse *ip_d, Range ran);
-void RangeHostToDevice(Range *ran_h, Range *ran_d);
-void DiffHostToDevice(Diff *dif_h, Diff *dif_d);
-void CoordHostToDevice(Coord *out_h, Coord *out_d, int outNum);
+void RangeHostToDevice(Range *ran_d, Range *ran_h);
+void DiffHostToDevice(Diff *dif_d, Diff *dif_h);
+void MedArrHostToDevice(MedArr *ma_d, MedArr *ma_h, Range ran);
+void ImpulseHostToDevice(Impulse *ip_d, Impulse *ip_h, int innum);
+void DimI3HostToDevice(DimI3 *di_d, DimI3 *di_h, int outnum);
 // データ転送　デバイス->ホスト
-void AccCoordDeviceToHost(AccCoord *acc_d, AccCoord *acc_h, int outNum);
-void BefAftDeviceToHost(BefAft *ba_d, BefAft *ba_h, Range ran);
+void DimD3DeviceToHost(DimD3 *acc_h, DimD3 *acc_d, int outNum);

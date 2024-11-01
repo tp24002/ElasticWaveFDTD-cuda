@@ -10,7 +10,8 @@
 #define MIN(i, j) (((i) < (j)) ? (i) : (j))
 #define MAX(i, j) (((i) > (j)) ? (i) : (j))
 
-void initCoord(Coord *co, int x, int y, int z) {
+
+void initDimI3(DimI3 *co, int x, int y, int z) {
   co->x = x;
   co->y = y;
   co->z = z;
@@ -52,9 +53,9 @@ void initMedium(Medium *med) {
 }
 
 void initDiff(Diff *dif, Medium *med) {
-  dif->dx = 0.005;
-  dif->dy = 0.005;
-  dif->dz = 0.005;
+  dif->dx = 0.001;
+  dif->dy = 0.001;
+  dif->dz = 0.001;
   double tmp = 0;
   
   for(int i = E_AIR; i < E_M_END; i++){
@@ -69,8 +70,8 @@ void initPml(Pml *pml, Medium *med, Diff dif) {
   double R = 1.e-20;
   double tmp = 0;
   double tmp_v = 0;//max
-  initCoord(&pml->pl1, 32, 32, 32);
-  initCoord(&pml->pl2, 32, 32, 32);
+  initDimI3(&pml->pl1, 32, 32, 32);
+  initDimI3(&pml->pl2, 32, 32, 32);
   //計算領域内最高速度
   for(int i = E_AIR; i < E_M_END; i++){
     tmp_v = MAX(sqrt((med[i].K + 4. / 3. * med[i].G) / med[i].rho), tmp_v);
@@ -80,28 +81,28 @@ void initPml(Pml *pml, Medium *med, Diff dif) {
   pml->fm = MAX(tmp, pml->fm);
 }
 
-void initRange(Range *ran, Coord region, Pml pml) {
-  // initCoord(&ran->sr.Txx, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initCoord(&ran->sr.Tyy, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initCoord(&ran->sr.Tzz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initCoord(&ran->tr.Txy, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
-  // initCoord(&ran->tr.Tyz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z - 1);
-  // initCoord(&ran->tr.Tzx, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
-  // initCoord(&ran->vr.Vx , x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initCoord(&ran->vr.Vy , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
-  // initCoord(&ran->vr.Vz , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
-  initCoord(&ran->sr.Txx, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->sr.Tyy, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->sr.Tzz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->tr.Txy, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->tr.Tyz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z + 1);
-  initCoord(&ran->tr.Tzx, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
-  initCoord(&ran->vr.Vx , region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->vr.Vy , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
-  initCoord(&ran->vr.Vz , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
+void initRange(Range *ran, DimI3 region, Pml pml) {
+  // initDimI3(&ran->sr.Txx, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initDimI3(&ran->sr.Tyy, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initDimI3(&ran->sr.Tzz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initDimI3(&ran->tr.Txy, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
+  // initDimI3(&ran->tr.Tyz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z - 1);
+  // initDimI3(&ran->tr.Tzx, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
+  // initDimI3(&ran->vr.Vx , x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
+  // initDimI3(&ran->vr.Vy , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
+  // initDimI3(&ran->vr.Vz , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
+  initDimI3(&ran->sr.Txx, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initDimI3(&ran->sr.Tyy, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initDimI3(&ran->sr.Tzz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initDimI3(&ran->tr.Txy, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
+  initDimI3(&ran->tr.Tyz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z + 1);
+  initDimI3(&ran->tr.Tzx, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
+  initDimI3(&ran->vr.Vx , region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z    );
+  initDimI3(&ran->vr.Vy , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z    );
+  initDimI3(&ran->vr.Vz , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
 } 
 
-void initRandom(Object con, Coord *clack, int ratio) {
+void initRandom(Object con, DimI3 *clack, int ratio) {
   if(con.range.x < 3 || con.range.y < 3 || con.range.z < 3) {
     printf("Cannot place defects.\n");
     return;
@@ -155,18 +156,18 @@ __global__ void ZeroT(BefAft *ba, Range *ran) {
   int id;
   if(i < imax && j < jmax && k < kmax) {
     id = k * imax * jmax + j * imax + i;
-    ba->sa.Txx[id] = 0;
-    ba->sa.Txxx[id] = 0;
-    ba->sa.Txxy[id] = 0;
-    ba->sa.Txxz[id] = 0;
-    ba->sa.Tyy[id] = 0;
-    ba->sa.Tyyx[id] = 0;
-    ba->sa.Tyyy[id] = 0;
-    ba->sa.Tyyz[id] = 0;
-    ba->sa.Tzz[id] = 0;
-    ba->sa.Tzzx[id] = 0;
-    ba->sa.Tzzy[id] = 0;
-    ba->sa.Tzzz[id] = 0;
+    ba[id].sa.Txx = 0;
+    ba[id].sa.Txxx = 0;
+    ba[id].sa.Txxy = 0;
+    ba[id].sa.Txxz = 0;
+    ba[id].sa.Tyy = 0;
+    ba[id].sa.Tyyx = 0;
+    ba[id].sa.Tyyy = 0;
+    ba[id].sa.Tyyz = 0;
+    ba[id].sa.Tzz = 0;
+    ba[id].sa.Tzzx = 0;
+    ba[id].sa.Tzzy = 0;
+    ba[id].sa.Tzzz = 0;
   } 
 }
 
@@ -179,9 +180,9 @@ __global__ void ZeroTxy(BefAft *ba, Range *ran) {
   int id;
   if(i < imax && j < jmax && k < kmax) {
     id = k * imax * jmax + j * imax + i;
-    ba->ta.Txy[id] = 0;
-    ba->ta.Txyx[id] = 0;
-    ba->ta.Txyy[id] = 0;
+    ba[id].ta.Txy = 0;
+    ba[id].ta.Txyx = 0;
+    ba[id].ta.Txyy = 0;
   } 
 }
 
@@ -194,9 +195,9 @@ __global__ void ZeroTyz(BefAft *ba, Range *ran) {
   int id;
   if(i < imax && j < jmax && k < kmax) {
     id = k * imax * jmax + j * imax + i;
-    ba->ta.Tyz[id] = 0;
-    ba->ta.Tyzy[id] = 0;
-    ba->ta.Tyzz[id] = 0;
+    ba[id].ta.Tyz = 0;
+    ba[id].ta.Tyzy = 0;
+    ba[id].ta.Tyzz = 0;
   } 
 }
 
@@ -209,9 +210,9 @@ __global__ void ZeroTzx(BefAft *ba, Range *ran) {
   int id;
   if(i < imax && j < jmax && k < kmax) {
     id = k * imax * jmax + j * imax + i;
-    ba->ta.Tzx[id] = 0;
-    ba->ta.Tzxz[id] = 0;
-    ba->ta.Tzxx[id] = 0;
+    ba[id].ta.Tzx = 0;
+    ba[id].ta.Tzxz = 0;
+    ba[id].ta.Tzxx = 0;
   } 
 }
 
@@ -224,10 +225,10 @@ __global__ void ZeroVx(BefAft *ba, Range *ran) {
   int id;
   if(i < imax && j < jmax && k < kmax) {
     id = k * imax * jmax + j * imax + i;
-    ba->va.Vx[id] = 0;
-    ba->va.Vxx[id] = 0;
-    ba->va.Vxy[id] = 0;
-    ba->va.Vxz[id] = 0;
+    ba[id].va.Vx = 0;
+    ba[id].va.Vxx = 0;
+    ba[id].va.Vxy = 0;
+    ba[id].va.Vxz = 0;
   } 
 }
 
@@ -240,10 +241,10 @@ __global__ void ZeroVy(BefAft *ba, Range *ran) {
   int id;
   if(i < imax && j < jmax && k < kmax) {
     id = k * imax * jmax + j * imax + i;
-    ba->va.Vy[id] = 0;
-    ba->va.Vyx[id] = 0;
-    ba->va.Vyy[id] = 0;
-    ba->va.Vyz[id] = 0;
+    ba[id].va.Vy = 0;
+    ba[id].va.Vyx = 0;
+    ba[id].va.Vyy = 0;
+    ba[id].va.Vyz = 0;
   } 
 }
 
@@ -256,9 +257,9 @@ __global__ void ZeroVz(BefAft *ba, Range *ran) {
   int id;
   if(i < imax && j < jmax && k < kmax) {
     id = k * imax * jmax + j * imax + i;
-    ba->va.Vz[id] = 0;
-    ba->va.Vzx[id] = 0;
-    ba->va.Vzy[id] = 0;
-    ba->va.Vzz[id] = 0;
+    ba[id].va.Vz = 0;
+    ba[id].va.Vzx = 0;
+    ba[id].va.Vzy = 0;
+    ba[id].va.Vzz = 0;
   } 
 }

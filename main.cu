@@ -11,77 +11,72 @@
 #include "./header/memory.h"
 
 void progressBar(int now, int max);
-void AccelerationCalculation(AccCoord *Acc, BefAft aft, BefAft bef, Diff dif, Coord out, Range ran);
+void AccelerationCalculation(DimD3 *Acc, BefAft *aft, BefAft *bef, Diff dif, DimI3 out, Range ran);
 
 int main(void) {
+  int tmax_h;
+  int outnum_h, innum_h;
   // 静的変数
   Medium med_h[E_M_END];
   Object air_h;
   Object con_h;
   Object clack_h;
-  Range ran_h, *ran_d;
   Pml pml_h;
+  Range ran_h, *ran_d;
   Diff dif_h, *dif_d;
-  int tmax_h;
-  int t_h;
-  int outNum_h;
-
 
   // 動的変数(計算領域の大きさで大きさ決定)
-  MedArr *ma_h, *ma_d;
-  BefAft bef_h, *bef_d;
-  BefAft aft_h, *aft_d;
+  MedArr *ma_h, *ma_d; // 転送後即解放
+  BefAft *bef_d;
+  BefAft *aft_d;
+  ImpulseArr *ipa_d;
+  // 動的変数(入出力地点数で大きさ決定)
   Impulse *ip_h, *ip_d;
-  
-  AccCoord *acc_h;
+  DimD3 *acc_h, *acc_d;
 
-  // int RegionArea;
-
-  FILE *fp1;
-  // FILE *fp1,*fp2,*fp3,*fp4;
-  char fn1[256];
-  // char fn1[256],fn2[256],fn3[256],fn4[256];
-  // int tmp = 0;
-
-  Coord *out_h;
-  // Coord center;
+  DimI3 *out_h, *out_d;
+  // DimI3 center;
   // // int make_models; // 作成するモデルの数
   // int model_count = 0; // いくつ目のモデルを作成中か
   // int ratio;
   // int max_Patern; // コンクリートのセル数
   // // int max_ClackPatern; // 欠陥を配置できる最大のパターン数
   // int clack_count; // 割合による欠陥数
-  Coord threads;
+  DimI3 threads;
 
   // スレッド数
-  initCoord(&threads, 4, 4, 8);
+  initDimI3(&threads, 4, 4, 8);
   
   // データ格納
-  StaticVariable(med_h, &pml_h, &ran_h, &dif_h, &air_h, &con_h, &clack_h, &tmax_h, &outNum_h);
+  StaticVariable(med_h, &pml_h, &ran_h, &dif_h, &air_h, &con_h, &clack_h, &tmax_h, &outnum_h, &innum_h);
   // ホスト動的変数
-  ma_h  = allocateHostMedArr(&ran_h);
-  ip_h  = allocateHostImpulse(&ran_h);
-  acc_h = allocateHostAccCoord(outNum_h);
-  out_h = allocateHostCoord(outNum_h);
+  ma_h  = allocateHostMedArr(ran_h);
+  ip_h  = allocateHostImpulse(innum_h);
+  acc_h = allocateHostDimD3(outnum_h);
+  out_h = allocateHostDimI3(outnum_h);
+  DynamicVariable(acc_h, ma_h, ip_h, ran_h, air_h, con_h, clack_h, pml_h, out_h, outnum_h);
   
   // デバイス動的変数
-  ma_d  = allocateDeviceMedArr(&ran_h);
-  bef_d = allocateDeviceBefAft(&ran_h);
-  aft_d = allocateDeviceBefAft(&ran_h);
-  ip_d  = allocateDeviceImpulse(&ran_h);
-
+  ma_d  = allocateDeviceMedArr(ran_h);
+  bef_d = allocateDeviceBefAft(ran_h);
+  aft_d = allocateDeviceBefAft(ran_h);
+  ipa_d = allocateDeviceImpulseArr(ran_h);
+  ip_d  = allocateDeviceImpulse(innum_h);
+  acc_d = allocateDeviceDimD3(outnum_h);
+  out_d = allocateDeviceDimI3(outnum_h);
+  
   // デバイス静的変数
   cudaMalloc(&ran_d, sizeof(Range));
   cudaMalloc(&dif_d, sizeof(Diff));
 
-  DynamicVariable(acc_h, ma_h, ip_h, ran_h, air_h, con_h, clack_h, pml_h, out_h, outNum_h);
-
   // ホスト->デバイス　データ転送
-  RangeHostToDevice(&ran_h, ran_d);
-  DiffHostToDevice(&dif_h, dif_d);
+  RangeHostToDevice(ran_d, &ran_h);
+  DiffHostToDevice(dif_d, &dif_h);
+  MedArrHostToDevice(ma_d, ma_h, ran_h);
+  ImpulseHostToDevice(ip_d, ip_h, innum_h);
+  DimI3HostToDevice(out_d, out_h, outnum_h);
 
-  MedArrHostToDevice(ma_h, ma_d, ran_h);
-  ImpulseHostToDevice(ip_h, ip_d, ran_h);
+  free(ma_h);
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
   dim3 ZeroTBlocks((ran_h.sr.Txx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -120,7 +115,18 @@ int main(void) {
   printf("sp   diff:%f,%f,%f\n", dif_h.dx, dif_h.dy, dif_h.dz);
   printf("time diff:%e\n", dif_h.dt);
   // Impulse
-  // printf("")
+  for(int i = 0; i < innum_h; i++) {
+    if(ip_h[i].mode == E_SINE) {
+      printf("ip:%lf(sin)\n", ip_h[i].freq);
+    } else {
+      printf("ip:%lf(cos)\n", ip_h[i].freq);
+    }
+    printf("in[%d]:%d,%d,%d\n", i, ip_h[i].in.x, ip_h[i].in.y, ip_h[i].in.z);
+  }
+  
+  for(int i = 0; i < outnum_h; i++) {
+    printf("out[%d]:%d,%d,%d\n", i, out_h[i].x, out_h[i].y, out_h[i].z);
+  }
   printf("time:%d\n", tmax_h);
 
   ///////////clack
@@ -145,36 +151,15 @@ int main(void) {
   //   // }
   // }
 
-  
-  // int idx, idy, idz;
-  // idx = ip_h->in.z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + ip_h->in.y * ran_h.sr.Txx.x + ip_h->in.x;
-  // idy = out_h[0].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[0].y * ran_h.sr.Txx.x + out_h[0].x;
-  // idz = out_h[1].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[1].y * ran_h.sr.Txx.x + out_h[1].x;
-  // for(int i = 0; i < ran_h.sr.Txx.x; i++) {
-  //   for(int j = 0; j < ran_h.sr.Txx.y; j++) {
-  //     id = j * ran_h.sr.Txx.x * ran_h.sr.Txx.y + ip_h->in.y * ran_h.sr.Txx.x + i;
-  //     if(id == idx) {
-  //       printf("*");
-  //     } else if(id == idy) {
-  //       printf("x");
-  //     } else if(id == idz) {
-  //       printf("x");
-  //     } else {
-  //       printf("o");
-  //     }
-  //   }
-  //   printf("\n");
-  // }
-
   //ファイル名出力
-  // printf("%.*s\n", (int) sizeof fn1, fn1);
   // fp1 = fopen(fn1, "wb");
 
   // double test;
-  int ratio = 10;
-  int model_count = 0;
-  sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
-  fp1 = fopen(fn1, "w");
+  // int ratio = 10;
+  // int model_count = 0;
+  // sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
+  // printf("%.*s\n", (int) sizeof fn1, fn1);
+  // fp1 = fopen(fn1, "w");
 
   // 0 padding
   ZeroT<<<ZeroTBlocks,threadsPerBlock>>>(aft_d, ran_d);
@@ -184,30 +169,30 @@ int main(void) {
   ZeroVx<<<ZeroVxBlocks,threadsPerBlock>>>(aft_d, ran_d);
   ZeroVy<<<ZeroVyBlocks,threadsPerBlock>>>(aft_d, ran_d);
   ZeroVz<<<ZeroVzBlocks,threadsPerBlock>>>(aft_d, ran_d);
-  for (t_h = 0; t_h < tmax_h; t_h++) {
-    // 入力情報作成
-    insertImpulse(ip_h, dif_h, t_h, ran_h);
-    ImpulseHostToDevice(ip_h, ip_d, ran_h);
-
-    Vel(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);
-    Sig(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, ip_d, threads);
+  cudaDeviceSynchronize();
+  FILE *fp;
+  char fn1[256];
+  sprintf(fn1, "./clack.csv");
+  fp = fopen(fn1, "w");
+  for (int t_h = 0; t_h < tmax_h; t_h++) {
+    // printf("ok\n");
+    createImpulse<<<1,1>>>(ipa_d, ip_d, dif_d, ran_d, innum_h, t_h);////////
+    cudaDeviceSynchronize();
+    Vel(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);//////////////////////////////
+    Sig(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, ipa_d, threads);
     Tau(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);
-
-    BefAftDeviceToHost(aft_d, &aft_h, ran_h);
-    BefAftDeviceToHost(bef_d, &bef_h, ran_h);
-
-    for(int j = 0; j < outNum_h; j++) {
-      AccelerationCalculation(&acc_h[j], aft_h, bef_h, dif_h, out_h[j], ran_h);
-      fprintf(fp1,"%le,%le,%le,", acc_h[j].x, acc_h[j].y, acc_h[j].z);
-    }
-    fprintf(fp1, "\n");
-
+    Acceleration<<<1,1>>>(acc_d, aft_d->va, bef_d->va, dif_d, out_d, ran_d, outnum_h);
+    DimD3DeviceToHost(acc_h, acc_d, outnum_h);
     swapBefAft(aft_d, bef_d, &ran_h, ran_d, threads);
+    for(int i = 0; i < outnum_h; i++) {
+      fprintf(fp, "%.6lf,%.6lf,%.6lf,", acc_h[i].x, acc_h[i].y, acc_h[i].z);
+    }
+    fprintf(fp, "\n");
     progressBar(t_h, tmax_h);
   }
-  printf("%lf\n", aft_h.sa.Tzz[0]);
-  fclose(fp1);
-  printf("loop end\n");
+  fclose(fp);
+  printf("\nloop end.\n");
+
   return 0;
 }
 
@@ -226,25 +211,3 @@ void progressBar(int now, int max) {
   fflush(stdout);
 }
 
-
-void AccelerationCalculation(AccCoord *Acc, BefAft aft, BefAft bef, Diff dif, Coord out, Range ran) {
-
-  int xmax = ran.sr.Txx.x, ymax = ran.sr.Txx.y;
-
-  int x = out.x;
-  int y = out.y;
-  int z = out.z;
-
-  // 1Dインデックスの計算
-  int idx   = z * (xmax * ymax) + y * xmax + x;
-  int idxX  = z * (xmax * ymax) + y * xmax + (x + 1);
-  int idxY  = z * (xmax * ymax) + (y + 1) * xmax + x;
-  int idxZ  = (z + 1) * (xmax * ymax) + y * xmax + x;
-
-  Acc->x = ((*(aft.va.Vx + idxX) - *(bef.va.Vx + idxX)) / dif.dt + (*(aft.va.Vx + idx) - *(bef.va.Vx + idx)) / dif.dt) / 2;
-
-  Acc->y = ((*(aft.va.Vy + idxY) - *(bef.va.Vy + idxY)) / dif.dt + (*(aft.va.Vy + idx) - *(bef.va.Vy + idx)) / dif.dt) / 2;
-
-  Acc->z = ((*(aft.va.Vz + idxZ) - *(bef.va.Vz + idxZ)) / dif.dt + (*(aft.va.Vz + idx) - *(bef.va.Vz + idx)) / dif.dt) / 2;
-  // printf("acc:%f,%f,%f\n", Acc.x, Acc.y, Acc.z);
-}
