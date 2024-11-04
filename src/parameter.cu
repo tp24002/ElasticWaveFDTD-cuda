@@ -14,7 +14,7 @@
 void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, Object *con, Object *clack, int *tmax, int *outnum, int *innum) {
   // 入力
   DimI3 region;
-  initDimI3(&region, 5, 5, 5);
+  initDimI3(&region, 15, 15, 15);
   DimI3 con_start;
   DimI3 con_ran;
   initDimI3(&con_start, 3, 3, 3);
@@ -24,6 +24,7 @@ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, O
   initDimI3(&clack_start, 3, 3, 3);
   initDimI3(&clack_ran, 0, 0, 0);
   *tmax = 32768;
+  // *tmax = 131072;
   *outnum = 2;
   *innum = 1;
 
@@ -41,8 +42,10 @@ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, O
   initDimI3(&air->range, ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
   // con
   con->med = med[E_CON];
-  initDimI3(&con->sp, con_start.x + pml->pl1.x - 1, con_start.y + pml->pl1.y - 1, con_start.z + pml->pl1.z - 1);
-  initDimI3(&con->range, con_ran.x, con_ran.y, con_ran.z);
+  // initDimI3(&con->sp, con_start.x + pml->pl1.x - 1, con_start.y + pml->pl1.y - 1, con_start.z + pml->pl1.z - 1);
+  initDimI3(&con->sp, 0, 0, 0);
+  initDimI3(&con->range, ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
+  // initDimI3(&con->range, con_ran.x, con_ran.y, con_ran.z);
   // 複数欠陥要検討
   // clack
   clack->med = med[E_AIR];
@@ -54,8 +57,8 @@ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, O
 // メモリ確保後に実行する必要がある
 void DynamicVariable(DimD3 *acc, MedArr *ma, Impulse *ip, Range ran, Object air, Object con, Object clack, Pml pml, DimI3 *out, int outnum) {
   // out
-  initDimI3(&out[0],  1 + pml.pl1.x - 1, 2 + pml.pl1.y - 1, 2 + pml.pl1.z - 1);
-  initDimI3(&out[1],  3 + pml.pl1.x - 1, 2 + pml.pl1.y - 1, 2 + pml.pl1.z - 1);
+  initDimI3(&out[0],  7 + pml.pl1.x - 1, 8 + pml.pl1.y - 1, 8 + pml.pl1.z - 1);
+  initDimI3(&out[1],  9 + pml.pl1.x - 1, 8 + pml.pl1.y - 1, 8 + pml.pl1.z - 1);
   // acc
   insertDimD3(acc, outnum);
   // ma
@@ -64,7 +67,7 @@ void DynamicVariable(DimD3 *acc, MedArr *ma, Impulse *ip, Range ran, Object air,
   insertClack(ma, clack, ran);
   insertPml(ma, pml, ran);
   // ip
-  initDimI3(&ip[0].in, 2 + pml.pl1.x - 1, 2 + pml.pl1.y - 1, 2 + pml.pl1.z - 1);//pml
+  initDimI3(&ip[0].in, 8 + pml.pl1.x - 1, 8 + pml.pl1.y - 1, 8 + pml.pl1.z - 1);//pml
   ip->freq = 2e6;
   ip->mode = E_SINE;
   // ip->mode = E_RCOS;

@@ -11,7 +11,6 @@
 #include "./header/memory.h"
 
 void progressBar(int now, int max);
-void AccelerationCalculation(DimD3 *Acc, BefAft *aft, BefAft *bef, Diff dif, DimI3 out, Range ran);
 
 int main(void) {
   int tmax_h;
@@ -35,13 +34,6 @@ int main(void) {
   DimD3 *acc_h, *acc_d;
 
   DimI3 *out_h, *out_d;
-  // DimI3 center;
-  // // int make_models; // 作成するモデルの数
-  // int model_count = 0; // いくつ目のモデルを作成中か
-  // int ratio;
-  // int max_Patern; // コンクリートのセル数
-  // // int max_ClackPatern; // 欠陥を配置できる最大のパターン数
-  // int clack_count; // 割合による欠陥数
   DimI3 threads;
 
   // スレッド数
@@ -55,7 +47,7 @@ int main(void) {
   acc_h = allocateHostDimD3(outnum_h);
   out_h = allocateHostDimI3(outnum_h);
   DynamicVariable(acc_h, ma_h, ip_h, ran_h, air_h, con_h, clack_h, pml_h, out_h, outnum_h);
-  
+
   // デバイス動的変数
   ma_d  = allocateDeviceMedArr(ran_h);
   bef_d = allocateDeviceBefAft(ran_h);

@@ -103,13 +103,12 @@ int main(void) {
   printf("sp   diff:%f,%f,%f\n", dif_h.dx, dif_h.dy, dif_h.dz);
   printf("time diff:%e\n", dif_h.dt);
   // Impulse
-  if(ip_h[0].mode == E_SINE) {
-    printf("ip:%lf(sin)\n", ip_h[0].freq);
-  } else {
-    printf("ip:%lf(cos)\n", ip_h[0].freq);
-  }
-
   for(int i = 0; i < innum_h; i++) {
+    if(ip_h[i].mode == E_SINE) {
+      printf("ip:%lf(sin)\n", ip_h[i].freq);
+    } else {
+      printf("ip:%lf(cos)\n", ip_h[i].freq);
+    }
     printf("in[%d]:%d,%d,%d\n", i, ip_h[i].in.x, ip_h[i].in.y, ip_h[i].in.z);
   }
   

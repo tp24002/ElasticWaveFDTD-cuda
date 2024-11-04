@@ -61,7 +61,7 @@ void initDiff(Diff *dif, Medium *med) {
   for(int i = E_AIR; i < E_M_END; i++){
     tmp = MAX(sqrt((med[i].K + 4. / 3. * med[i].G) / med[i].rho),tmp);
   }
-  dif->dt = dif->dx / (tmp * 100);
+  dif->dt = dif->dx / (tmp * 1000);
 }
 
 void initPml(Pml *pml, Medium *med, Diff dif) {

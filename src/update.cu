@@ -163,6 +163,21 @@ __global__ void createImpulse(ImpulseArr *ipa, Impulse *ip, Diff *dif, Range *ra
       ipa[id].Tzz = 0;
     }
   }
+  // if (t >= 1. / ip->freq / dif->dt) {
+  //   ipa[id].Txx = 0;
+  //   ipa[id].Tyy = 0;
+  //   ipa[id].Tzz = 0;
+  //   return;
+  // }
+  // if (ip->mode == E_SINE) {
+  //   ipa[id].Txx = 0;
+  //   ipa[id].Tyy = 0;
+  //   ipa[id].Tzz = 8.e3 * 0.5 * sin(2. * M_PI * ip->freq * (double)t * dif->dt) / 2.;
+  // } else if (ip->mode == E_RCOS) {
+  //   ipa[id].Txx = 0;
+  //   ipa[id].Tyy = 0;
+  //   ipa[id].Tzz = 8.e3 * 0.5 * (1. - cos(2. * M_PI * ip->freq * (double)t * dif->dt)) / 2.;
+  // }
 }
 
 // Txxクラス的な(Blocks大丈夫かな？)
