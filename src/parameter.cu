@@ -14,7 +14,7 @@
 void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, Object *con, Object *clack, int *tmax, int *outnum, int *innum) {
   // 入力
   DimI3 region;
-  initDimI3(&region, 15, 15, 15);
+  initDimI3(&region, 15 * 3, 15 * 3, 15 * 3);
   DimI3 con_start;
   DimI3 con_ran;
   initDimI3(&con_start, 3, 3, 3);
@@ -42,23 +42,20 @@ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, O
   initDimI3(&air->range, ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
   // con
   con->med = med[E_CON];
-  // initDimI3(&con->sp, con_start.x + pml->pl1.x - 1, con_start.y + pml->pl1.y - 1, con_start.z + pml->pl1.z - 1);
-  initDimI3(&con->sp, 0, 0, 0);
-  initDimI3(&con->range, ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
-  // initDimI3(&con->range, con_ran.x, con_ran.y, con_ran.z);
+  initDimI3(&con->sp, con_start.x + pml->pl1.x - 1, con_start.y + pml->pl1.y - 1, con_start.z + pml->pl1.z - 1);
+  initDimI3(&con->range, con_ran.x, con_ran.y, con_ran.z);
+  // initDimI3(&con->sp, 0, 0, 0);
+  // initDimI3(&con->range, ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
   // 複数欠陥要検討
   // clack
-  clack->med = med[E_AIR];
-  initDimI3(&clack->sp, clack_start.x + pml->pl1.x - 1, clack_start.y + pml->pl1.y - 1, clack_start.z + pml->pl1.z - 1);
-  initDimI3(&clack->range, clack_ran.x, clack_ran.y, clack_ran.z);
+  // clack->med = med[E_AIR];
+  // initDimI3(&clack->sp, clack_start.x + pml->pl1.x - 1, clack_start.y + pml->pl1.y - 1, clack_start.z + pml->pl1.z - 1);
+  // initDimI3(&clack->range, clack_ran.x, clack_ran.y, clack_ran.z);
 }
 
 // 動的変数(静的変数によって大きさが変わる変数)
 // メモリ確保後に実行する必要がある
 void DynamicVariable(DimD3 *acc, MedArr *ma, Impulse *ip, Range ran, Object air, Object con, Object clack, Pml pml, DimI3 *out, int outnum) {
-  // out
-  initDimI3(&out[0],  7 + pml.pl1.x - 1, 8 + pml.pl1.y - 1, 8 + pml.pl1.z - 1);
-  initDimI3(&out[1],  9 + pml.pl1.x - 1, 8 + pml.pl1.y - 1, 8 + pml.pl1.z - 1);
   // acc
   insertDimD3(acc, outnum);
   // ma
@@ -67,11 +64,17 @@ void DynamicVariable(DimD3 *acc, MedArr *ma, Impulse *ip, Range ran, Object air,
   insertClack(ma, clack, ran);
   insertPml(ma, pml, ran);
   // ip
-  initDimI3(&ip[0].in, 8 + pml.pl1.x - 1, 8 + pml.pl1.y - 1, 8 + pml.pl1.z - 1);//pml
+  initDimI3(&ip[0].in, 8 + 1 + pml.pl1.x - 1, 8 + 1 + pml.pl1.y - 1, 8 + 1 + pml.pl1.z - 1);//pml
   ip->freq = 2e6;
   ip->mode = E_SINE;
   // ip->mode = E_RCOS;
-
+  // out
+  // 7 + 1 + pml.pl1.x - 1
+  // 1～で7番目，仮想セルで+1，pml層数で+pml，配列番号化で-1
+  // initDimI3(&out[0], ip[0].in.x - 5 + 1 + pml.pl1.x - 1, ip[0].in.y + 1 + pml.pl1.y - 1, ip[0].in.z + 1 + pml.pl1.z - 1);
+  // initDimI3(&out[1], ip[0].in.x + 5 + 1 + pml.pl1.x - 1, ip[0].in.y + 1 + pml.pl1.y - 1, ip[0].in.z + 1 + pml.pl1.z - 1);
+  initDimI3(&out[0], ip[0].in.x, ip[0].in.y, ip[0].in.z - 5);
+  initDimI3(&out[1], ip[0].in.x, ip[0].in.y, ip[0].in.z + 5);
 }
 
 void insertDimD3(DimD3 *dd3, int outnum) {
@@ -123,16 +126,17 @@ void insertConcrete(MedArr *ma, Object con, Range ran) {
   int i, j, k;
   Medium objmed = con.med;
 
-  int X = con.sp.x + con.range.x;
-  int Y = con.sp.y + con.range.y;
-  int Z = con.sp.z + con.range.z;
+  int X = con.sp.x + 1 + con.range.x;
+  int Y = con.sp.y + 1 + con.range.y;
+  int Z = con.sp.z + 1 + con.range.z;
 
   int nx = ran.sr.Txx.x;
   int ny = ran.sr.Txx.y;
 
-  for (k = con.sp.z; k < Z; k++) {
-    for (j = con.sp.y; j < Y; j++) {
-      for (i = con.sp.x; i < X; i++) {
+  printf("ok\n");
+  for (k = con.sp.z + 1; k < Z; k++) {
+    for (j = con.sp.y + 1; j < Y; j++) {
+      for (i = con.sp.x + 1; i < X; i++) {
         int idx = k * nx * ny + j * nx + i;
         ma[idx].ramda = objmed.ramda;
         ma[idx].mu = objmed.G;
@@ -159,16 +163,15 @@ void insertClack(MedArr *ma, Object clack, Range ran) {
   int i, j, k;
   Medium objmed = clack.med;
 
-  int X = clack.sp.x + clack.range.x;
-  int Y = clack.sp.y + clack.range.y;
-  int Z = clack.sp.z + clack.range.z;
+  int X = clack.sp.x + 1 + clack.range.x;
+  int Y = clack.sp.y + 1 + clack.range.y;
+  int Z = clack.sp.z + 1 + clack.range.z;
 
   int nx = ran.sr.Txx.x;
   int ny = ran.sr.Txx.y;
-
-  for (k = clack.sp.z; k < Z; k++) {
-    for (j = clack.sp.y; j < Y; j++) {
-      for (i = clack.sp.x; i < X; i++) {
+  for (k = clack.sp.z + 1; k < Z; k++) {
+    for (j = clack.sp.y + 1; j < Y; j++) {
+      for (i = clack.sp.x + 1; i < X; i++) {
         int idx = k * nx * ny + j * nx + i;
         ma[idx].ramda = objmed.ramda;
         ma[idx].mu = objmed.G;
@@ -202,76 +205,121 @@ void insertPml(MedArr *ma, Pml pml, Range ran) {
   // x方向
   for (k = 0; k < Txxkmax; k++) {
     for (j = 0; j < Txxjmax; j++) {
-      for (i = 0; i < plx1; i++) {
+      for (i = 0; i < plx1 + 1; i++) {
         int idx = (Txximax * Txxjmax * k) + (Txximax * j) + i;
-        ma[idx].zetaxx += zeta_max * pow(((double)plx1 - (double)i) / (double)plx1, ta);
-        ma[idx].zetayx += zeta_max * pow(((double)plx1 - (double)i) / (double)plx1, ta);
-        ma[idx].zetazx += zeta_max * pow(((double)plx1 - (double)i) / (double)plx1, ta);
-        ma[idx].zetadx = ma[idx].zetaxx / ma[idx].rho;
+        if(i == 0) {
+          ma[idx].zetaxx += zeta_max;
+          ma[idx].zetayx += zeta_max;
+          ma[idx].zetazx += zeta_max;
+          ma[idx].zetadx = ma[idx].zetaxx / ma[idx].rho;
+        } else {
+          ma[idx].zetaxx += zeta_max * pow(((double)plx1 + 1 - (double)i) / (double)plx1, ta);
+          ma[idx].zetayx += zeta_max * pow(((double)plx1 + 1 - (double)i) / (double)plx1, ta);
+          ma[idx].zetazx += zeta_max * pow(((double)plx1 + 1 - (double)i) / (double)plx1, ta);
+          ma[idx].zetadx = ma[idx].zetaxx / ma[idx].rho;
+        }
       }
     }
   }
+
   // x方向
   for (k = 0; k < Txxkmax; k++) {
     for (j = 0; j < Txxjmax; j++) {
-      for (i = Txximax - plx2; i < Txximax; i++) {
+      for (i = Txximax - plx2 - 1; i < Txximax; i++) {
         int idx = (Txximax * Txxjmax * k) + (Txximax * j) + i;
-        ma[idx].zetaxx += zeta_max * pow(((double)i - (double)(Txximax - 1 - plx2)) / (double)plx2, ta);
-        ma[idx].zetayx += zeta_max * pow(((double)i - (double)(Txximax - 1 - plx2)) / (double)plx2, ta);
-        ma[idx].zetazx += zeta_max * pow(((double)i - (double)(Txximax - 1 - plx2)) / (double)plx2, ta);
-        ma[idx].zetadx = ma[idx].zetaxx / ma[idx].rho;
+        if(i == Txximax - 1) {
+          ma[idx].zetaxx += zeta_max;
+          ma[idx].zetayx += zeta_max;
+          ma[idx].zetazx += zeta_max;
+          ma[idx].zetadx = ma[idx].zetaxx / ma[idx].rho;
+        } else {
+          ma[idx].zetaxx += zeta_max * pow(((double)i + 1 - (double)(Txximax - 1 - plx2)) / (double)plx2, ta);
+          ma[idx].zetayx += zeta_max * pow(((double)i + 1 - (double)(Txximax - 1 - plx2)) / (double)plx2, ta);
+          ma[idx].zetazx += zeta_max * pow(((double)i + 1 - (double)(Txximax - 1 - plx2)) / (double)plx2, ta);
+          ma[idx].zetadx = ma[idx].zetaxx / ma[idx].rho;
+        }
+        
       }
     }
   }
 
   // y方向 (前方)
   for (k = 0; k < Txxkmax; k++) {
-    for (j = 0; j < ply1; j++) {
+    for (j = 0; j < ply1 + 1; j++) {
       for (i = 0; i < Txximax; i++) {
         int idx = (Txximax * Txxjmax * k) + (Txximax * j) + i;
-        ma[idx].zetaxy += zeta_max * pow(((double)ply1 - (double)j) / (double)ply1, ta);
-        ma[idx].zetayy += zeta_max * pow(((double)ply1 - (double)j) / (double)ply1, ta);
-        ma[idx].zetazy += zeta_max * pow(((double)ply1 - (double)j) / (double)ply1, ta);
-        ma[idx].zetady = ma[idx].zetaxy / ma[idx].rho;
+        if(j == 0) {
+          ma[idx].zetaxy += zeta_max;
+          ma[idx].zetayy += zeta_max;
+          ma[idx].zetazy += zeta_max;
+          ma[idx].zetady = ma[idx].zetaxy / ma[idx].rho;
+        } else {
+          ma[idx].zetaxy += zeta_max * pow(((double)ply1 + 1 - (double)j) / (double)ply1, ta);
+          ma[idx].zetayy += zeta_max * pow(((double)ply1 + 1 - (double)j) / (double)ply1, ta);
+          ma[idx].zetazy += zeta_max * pow(((double)ply1 + 1 - (double)j) / (double)ply1, ta);
+          ma[idx].zetady = ma[idx].zetaxy / ma[idx].rho;
+        }
       }
     }
   }
 
   // y方向 (後方)
   for (k = 0; k < Txxkmax; k++) {
-    for (j = Txxjmax - ply2; j < Txxjmax; j++) {
+    for (j = Txxjmax - ply2 - 1; j < Txxjmax; j++) {
       for (i = 0; i < Txximax; i++) {
         int idx = (Txximax * Txxjmax * k) + (Txximax * j) + i;
-        ma[idx].zetaxy += zeta_max * pow(((double)j - (double)(Txxjmax - 1 - ply2)) / (double)ply2, ta);
-        ma[idx].zetayy += zeta_max * pow(((double)j - (double)(Txxjmax - 1 - ply2)) / (double)ply2, ta);
-        ma[idx].zetazy += zeta_max * pow(((double)j - (double)(Txxjmax - 1 - ply2)) / (double)ply2, ta);
-        ma[idx].zetady = ma[idx].zetaxy / ma[idx].rho;
+        if(j == Txxjmax - 1) {
+          ma[idx].zetaxy += zeta_max;
+          ma[idx].zetayy += zeta_max;
+          ma[idx].zetazy += zeta_max;
+          ma[idx].zetady = ma[idx].zetaxy / ma[idx].rho;
+        } else {
+          ma[idx].zetaxy += zeta_max * pow(((double)j + 1 - (double)(Txxjmax - 1 - ply2)) / (double)ply2, ta);
+          ma[idx].zetayy += zeta_max * pow(((double)j + 1 - (double)(Txxjmax - 1 - ply2)) / (double)ply2, ta);
+          ma[idx].zetazy += zeta_max * pow(((double)j + 1 - (double)(Txxjmax - 1 - ply2)) / (double)ply2, ta);
+          ma[idx].zetady = ma[idx].zetaxy / ma[idx].rho;
+        }
+        
       }
     }
   }
 
   // z方向 (前方)
-  for (k = 0; k < plz1; k++) {
+  for (k = 0; k < plz1 + 1; k++) {
     for (j = 0; j < Txxjmax; j++) {
       for (i = 0; i < Txximax; i++) {
         int idx = (Txximax * Txxjmax * k) + (Txximax * j) + i;
-        ma[idx].zetaxz += zeta_max * pow(((double)plz1 - (double)k) / (double)plz1, ta);
-        ma[idx].zetayz += zeta_max * pow(((double)plz1 - (double)k) / (double)plz1, ta);
-        ma[idx].zetazz += zeta_max * pow(((double)plz1 - (double)k) / (double)plz1, ta);
-        ma[idx].zetadz = ma[idx].zetaxz / ma[idx].rho;
+        if(k == 0) {
+          ma[idx].zetaxz += zeta_max;
+          ma[idx].zetayz += zeta_max;
+          ma[idx].zetazz += zeta_max;
+          ma[idx].zetadz = ma[idx].zetaxz / ma[idx].rho;
+        } else {
+          ma[idx].zetaxz += zeta_max * pow(((double)plz1 + 1 - (double)k) / (double)plz1, ta);
+          ma[idx].zetayz += zeta_max * pow(((double)plz1 + 1 - (double)k) / (double)plz1, ta);
+          ma[idx].zetazz += zeta_max * pow(((double)plz1 + 1 - (double)k) / (double)plz1, ta);
+          ma[idx].zetadz = ma[idx].zetaxz / ma[idx].rho;
+        }
       }
     }
   }
 
   // z方向 (後方)
-  for (k = Txxkmax - plz2; k < Txxkmax; k++) {
+  for (k = Txxkmax - plz2 - 1; k < Txxkmax; k++) {
     for (j = 0; j < Txxjmax; j++) {
       for (i = 0; i < Txximax; i++) {
         int idx = (Txximax * Txxjmax * k) + (Txximax * j) + i;
-        ma[idx].zetaxz += zeta_max * pow(((double)k - (double)(Txxkmax - 1 - plz2)) / (double)plz2, ta);
-        ma[idx].zetayz += zeta_max * pow(((double)k - (double)(Txxkmax - 1 - plz2)) / (double)plz2, ta);
-        ma[idx].zetazz += zeta_max * pow(((double)k - (double)(Txxkmax - 1 - plz2)) / (double)plz2, ta);
-        ma[idx].zetadz = ma[idx].zetaxz / ma[idx].rho;
+        if(k == Txxkmax - 1) {
+          ma[idx].zetaxz += zeta_max;
+          ma[idx].zetayz += zeta_max;
+          ma[idx].zetazz += zeta_max;
+          ma[idx].zetadz = ma[idx].zetaxz / ma[idx].rho;
+        } else {
+          ma[idx].zetaxz += zeta_max * pow(((double)k + 1 - (double)(Txxkmax - 1 - plz2)) / (double)plz2, ta);
+          ma[idx].zetayz += zeta_max * pow(((double)k + 1 - (double)(Txxkmax - 1 - plz2)) / (double)plz2, ta);
+          ma[idx].zetazz += zeta_max * pow(((double)k + 1 - (double)(Txxkmax - 1 - plz2)) / (double)plz2, ta);
+          ma[idx].zetadz = ma[idx].zetaxz / ma[idx].rho;
+        }
       }
     }
   }

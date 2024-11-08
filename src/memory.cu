@@ -13,59 +13,30 @@
 
 MedArr* allocateHostMedArr(Range ran) {
     MedArr *medarrptr;
-    medarrptr = (MedArr*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(MedArr));
+    int cell = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    medarrptr = (MedArr*)malloc(cell * sizeof(MedArr));
+    // memset(medarrptr, 0, cell * sizeof(MedArr));
     return medarrptr;
 }
 
-// BefAft* allocateHostBefAft(Range *ran) {
-//     BefAft *baptr;
-//     baptr = (BefAft*)malloc(sizeof(BefAft));
-//     // SigArr
-//     baptr->sa.Txx = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-//     baptr->sa.Txxx = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-//     baptr->sa.Txxy = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-//     baptr->sa.Txxz = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-//     baptr->sa.Tyy = (double*)malloc(ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
-//     baptr->sa.Tyyx = (double*)malloc(ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
-//     baptr->sa.Tyyy = (double*)malloc(ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
-//     baptr->sa.Tyyz = (double*)malloc(ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
-//     baptr->sa.Tzz = (double*)malloc(ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
-//     baptr->sa.Tzzx = (double*)malloc(ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
-//     baptr->sa.Tzzy = (double*)malloc(ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
-//     baptr->sa.Tzzz = (double*)malloc(ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
-//     // TauArr
-//     baptr->ta.Txy = (double*)malloc(ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double));
-//     baptr->ta.Txyx = (double*)malloc(ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double));
-//     baptr->ta.Txyy = (double*)malloc(ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double));
-//     baptr->ta.Tyz = (double*)malloc(ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double));
-//     baptr->ta.Tyzy = (double*)malloc(ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double));
-//     baptr->ta.Tyzz = (double*)malloc(ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double));
-//     baptr->ta.Tzx = (double*)malloc(ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double));
-//     baptr->ta.Tzxz = (double*)malloc(ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double));
-//     baptr->ta.Tzxx = (double*)malloc(ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double));
-//     // VelArr
-//     baptr->va.Vx = (double*)malloc(ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
-//     baptr->va.Vxx = (double*)malloc(ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
-//     baptr->va.Vxy = (double*)malloc(ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
-//     baptr->va.Vxz = (double*)malloc(ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
-//     baptr->va.Vy = (double*)malloc(ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
-//     baptr->va.Vyx = (double*)malloc(ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
-//     baptr->va.Vyy = (double*)malloc(ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
-//     baptr->va.Vyz = (double*)malloc(ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
-//     baptr->va.Vz = (double*)malloc(ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
-//     baptr->va.Vzx = (double*)malloc(ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
-//     baptr->va.Vzy = (double*)malloc(ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
-//     baptr->va.Vzz = (double*)malloc(ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
-//     return baptr;
-// }
+BefAft* allocateHostBefAft(Range ran) {
+    BefAft *ba;
+    ba = (BefAft*)malloc(sizeof(BefAft));
+    ba->sa.Txx = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
+    ba->sa.Tyy = (double*)malloc(ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
+    ba->sa.Tzz = (double*)malloc(ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
+    ba->ta.Txy = (double*)malloc(ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double));
+    ba->ta.Tyz = (double*)malloc(ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double));
+    ba->ta.Tzx = (double*)malloc(ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double));
+    ba->va.Vx  = (double*)malloc(ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
+    ba->va.Vy  = (double*)malloc(ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
+    ba->va.Vz  = (double*)malloc(ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
+    return ba;
+}
 
 Impulse* allocateHostImpulse(int innum) {
     Impulse *impulseptr;
     impulseptr = (Impulse*)malloc(innum * sizeof(Impulse));
-    // impulseptr->Txx = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-    // impulseptr->Tyy = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-    // impulseptr->Tzz = (double*)malloc(ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-    // impulseptr->in  = (DimI3*)malloc(innum * sizeof(DimI3));
     return impulseptr;
 }
 
@@ -85,7 +56,8 @@ DimD3* allocateHostDimD3(int outnum) {
 // deviceメモリ確保
 MedArr* allocateDeviceMedArr(Range ran) {
     MedArr *med;
-    cudaError_t err = cudaMalloc(&med, ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(MedArr));
+    int cell = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    cudaError_t err = cudaMalloc(&med, cell * sizeof(MedArr));
     printf("allocateDeviceMedArr:%s\n", cudaGetErrorString(err));
     return med;
 }
@@ -95,51 +67,60 @@ BefAft* allocateDeviceBefAft(Range ran) {
     
     ba = (BefAft*)malloc(sizeof(BefAft));
 
+    int celltxx = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    int celltyy = ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z;
+    int celltzz = ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z;
+    int celltxy = ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z;
+    int celltyz = ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z;
+    int celltzx = ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z;
+    int cellvx  = ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z;
+    int cellvy  = ran.vr.Vx.x * ran.vr.Vy.y * ran.vr.Vy.z;
+    int cellvz  = ran.vr.Vx.x * ran.vr.Vz.y * ran.vr.Vz.z;
     // SigArr
-    cudaError_t err = cudaMalloc(&ba->sa.Txx , ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
+    cudaError_t err = cudaMalloc(&ba->sa.Txx , celltxx * sizeof(double));
     printf("allocateDeviceBefAft:%s\n", cudaGetErrorString(err));
-    cudaMalloc(&ba->sa.Txxx, ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-    cudaMalloc(&ba->sa.Txxy, ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
-    cudaMalloc(&ba->sa.Txxz, ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double));
+    cudaMalloc(&ba->sa.Txxx, celltxx * sizeof(double));
+    cudaMalloc(&ba->sa.Txxy, celltxx * sizeof(double));
+    cudaMalloc(&ba->sa.Txxz, celltxx * sizeof(double));
 
-    cudaMalloc(&ba->sa.Tyy , ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
-    cudaMalloc(&ba->sa.Tyyx, ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
-    cudaMalloc(&ba->sa.Tyyy, ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
-    cudaMalloc(&ba->sa.Tyyz, ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double));
+    cudaMalloc(&ba->sa.Tyy , celltyy * sizeof(double));
+    cudaMalloc(&ba->sa.Tyyx, celltyy * sizeof(double));
+    cudaMalloc(&ba->sa.Tyyy, celltyy * sizeof(double));
+    cudaMalloc(&ba->sa.Tyyz, celltyy * sizeof(double));
 
-    cudaMalloc(&ba->sa.Tzz , ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
-    cudaMalloc(&ba->sa.Tzzx, ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
-    cudaMalloc(&ba->sa.Tzzy, ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
-    cudaMalloc(&ba->sa.Tzzz, ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double));
+    cudaMalloc(&ba->sa.Tzz , celltzz * sizeof(double));
+    cudaMalloc(&ba->sa.Tzzx, celltzz * sizeof(double));
+    cudaMalloc(&ba->sa.Tzzy, celltzz * sizeof(double));
+    cudaMalloc(&ba->sa.Tzzz, celltzz * sizeof(double));
 
     // TauArr
-    cudaMalloc(&ba->ta.Txy , ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double));
-    cudaMalloc(&ba->ta.Txyx, ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double));
-    cudaMalloc(&ba->ta.Txyy, ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double));
+    cudaMalloc(&ba->ta.Txy , celltxy * sizeof(double));
+    cudaMalloc(&ba->ta.Txyx, celltxy * sizeof(double));
+    cudaMalloc(&ba->ta.Txyy, celltxy * sizeof(double));
 
-    cudaMalloc(&ba->ta.Tyz , ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double));
-    cudaMalloc(&ba->ta.Tyzy, ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double));
-    cudaMalloc(&ba->ta.Tyzz, ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double));
+    cudaMalloc(&ba->ta.Tyz , celltyz * sizeof(double));
+    cudaMalloc(&ba->ta.Tyzy, celltyz * sizeof(double));
+    cudaMalloc(&ba->ta.Tyzz, celltyz * sizeof(double));
 
-    cudaMalloc(&ba->ta.Tzx , ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double));
-    cudaMalloc(&ba->ta.Tzxz, ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double));
-    cudaMalloc(&ba->ta.Tzxx, ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double));
+    cudaMalloc(&ba->ta.Tzx , celltzx * sizeof(double));
+    cudaMalloc(&ba->ta.Tzxz, celltzx * sizeof(double));
+    cudaMalloc(&ba->ta.Tzxx, celltzx * sizeof(double));
 
      // VelArr
-    cudaMalloc(&ba->va.Vx  , ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
-    cudaMalloc(&ba->va.Vxx , ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
-    cudaMalloc(&ba->va.Vxy , ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
-    cudaMalloc(&ba->va.Vxz , ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double));
+    cudaMalloc(&ba->va.Vx  , cellvx * sizeof(double));
+    cudaMalloc(&ba->va.Vxx , cellvx * sizeof(double));
+    cudaMalloc(&ba->va.Vxy , cellvx * sizeof(double));
+    cudaMalloc(&ba->va.Vxz , cellvx * sizeof(double));
 
-    cudaMalloc(&ba->va.Vy  , ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
-    cudaMalloc(&ba->va.Vyx , ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
-    cudaMalloc(&ba->va.Vyy , ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
-    cudaMalloc(&ba->va.Vyz , ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double));
+    cudaMalloc(&ba->va.Vy  , cellvy * sizeof(double));
+    cudaMalloc(&ba->va.Vyx , cellvy * sizeof(double));
+    cudaMalloc(&ba->va.Vyy , cellvy * sizeof(double));
+    cudaMalloc(&ba->va.Vyz , cellvy * sizeof(double));
 
-    cudaMalloc(&ba->va.Vz  , ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
-    cudaMalloc(&ba->va.Vzx , ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
-    cudaMalloc(&ba->va.Vzy , ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
-    cudaMalloc(&ba->va.Vzz , ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double));
+    cudaMalloc(&ba->va.Vz  , cellvz * sizeof(double));
+    cudaMalloc(&ba->va.Vzx , cellvz * sizeof(double));
+    cudaMalloc(&ba->va.Vzy , cellvz * sizeof(double));
+    cudaMalloc(&ba->va.Vzz , cellvz * sizeof(double));
 
     return ba;
 }
@@ -156,8 +137,9 @@ BefAft* allocateDeviceBefAft(Range ran) {
 
 ImpulseArr* allocateDeviceImpulseArr(Range ran) {
     ImpulseArr *ipa;
+    int celltxx = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
     ipa = (ImpulseArr*)malloc(sizeof(ImpulseArr));
-    cudaError_t err = cudaMalloc(&ipa, ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(ImpulseArr));
+    cudaError_t err = cudaMalloc(&ipa, celltxx * sizeof(ImpulseArr));
     printf("allocateDeviceImpulseArr:%s\n", cudaGetErrorString(err));
     return ipa;
 }
@@ -196,7 +178,8 @@ void DiffHostToDevice(Diff *dif_d, Diff *dif_h) {
 }
 
 void MedArrHostToDevice(MedArr *ma_d, MedArr *ma_h, Range ran) {
-    cudaMemcpy(ma_d, ma_h, ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(MedArr), cudaMemcpyHostToDevice);
+    int celltxx = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    cudaMemcpy(ma_d, ma_h, celltxx * sizeof(MedArr), cudaMemcpyHostToDevice);
 }
 
 void ImpulseHostToDevice(Impulse *ip_d, Impulse *ip_h, int innum) {
@@ -208,6 +191,18 @@ void DimI3HostToDevice(DimI3 *di_d, DimI3 *di_h, int outnum) {
 }
 
 // device to host
+
+void BefAftDeviceToHost(BefAft *ba_h, BefAft *ba_d, Range ran) {
+    cudaMemcpy(ba_h->sa.Txx, ba_d->sa.Txx, ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->sa.Tyy, ba_d->sa.Tyy, ran.sr.Tyy.x * ran.sr.Tyy.y * ran.sr.Tyy.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->sa.Tzz, ba_d->sa.Tzz, ran.sr.Tzz.x * ran.sr.Tzz.y * ran.sr.Tzz.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->ta.Txy, ba_d->ta.Txy, ran.tr.Txy.x * ran.tr.Txy.y * ran.tr.Txy.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->ta.Tyz, ba_d->ta.Tyz, ran.tr.Tyz.x * ran.tr.Tyz.y * ran.tr.Tyz.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->ta.Tzx, ba_d->ta.Tzx, ran.tr.Tzx.x * ran.tr.Tzx.y * ran.tr.Tzx.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->va.Vx , ba_d->va.Vx , ran.vr.Vx.x * ran.vr.Vx.y * ran.vr.Vx.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->va.Vy , ba_d->va.Vy , ran.vr.Vy.x * ran.vr.Vy.y * ran.vr.Vy.z * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ba_h->va.Vz , ba_d->va.Vz , ran.vr.Vz.x * ran.vr.Vz.y * ran.vr.Vz.z * sizeof(double), cudaMemcpyDeviceToHost);
+}
 
 void DimD3DeviceToHost(DimD3 *acc_h, DimD3 *acc_d, int outNum) {
     cudaMemcpy(acc_h, acc_d, outNum * sizeof(DimD3), cudaMemcpyDeviceToHost);

@@ -86,7 +86,18 @@ int main(void) {
   MedArrHostToDevice(ma_d, ma_h, ran_h);
   ImpulseHostToDevice(ip_d, ip_h, innum_h);
   DimI3HostToDevice(out_d, out_h, outnum_h);
-
+  FILE *fp1;
+  char fn1[256];
+  sprintf(fn1,"./ma.csv");
+  fp1 = fopen(fn1, "w");
+  for(int i = 0; i < ran_h.sr.Txx.x; i++) {
+    for(int j = 0; j < ran_h.sr.Txx.y; j++) {
+      int idx = 68 * ran_h.sr.Txx.x * ran_h.sr.Txx.y + j * ran_h.sr.Txx.x + i;
+      fprintf(fp1, "%lf,", ma_h[idx].zetaxx);
+    }
+    fprintf(fp1, "\n");
+  }
+  fclose(fp1);
   free(ma_h);
 
   // 出力
@@ -126,19 +137,11 @@ int main(void) {
 //   ZeroVz<<<ZeroVzBlocks,threadsPerBlock>>>(aft_d, ran_d);
 //   cudaDeviceSynchronize();
   FILE *fp;
-  char fn1[256];
-  sprintf(fn1, "./clack.csv");
-  fp = fopen(fn1, "w");
+  char fn[256];
+  sprintf(fn, "./clack.csv");
+  fp = fopen(fn, "w");
 
-  // for(int i = 0; i < ran_h.sr.Txx.x; i++) {
-  //   for(int j = 0; j < ran_h.sr.Txx.y; j++) {
-  //     int idx = 68 * ran_h.sr.Txx.x * ran_h.sr.Txx.y + j * ran_h.sr.Txx.x + i;
-  //     // printf("%lf ", ma_h[idx].zetaxx);
-  //     fprintf(fp, "%lf,", ma_h[idx].rho);
-  //   }
-  //   // printf("\n");
-  //   fprintf(fp, "\n");
-  // }
+
   // ImpulseArr *ipa_h;
   // int sizetxx = ran_h.sr.Txx.x * ran_h.sr.Txx.y * ran_h.sr.Txx.z;
   // int sizetxy = ran_h.tr.Txy.x * ran_h.tr.Txy.y * ran_h.tr.Txy.z;
@@ -146,6 +149,16 @@ int main(void) {
   // ipa_h = (ImpulseArr*)malloc(size * sizeof(ImpulseArr));
   // printf("%d\n", id);
   // printMedArr<<<1,1>>>(ma_d, ran_d);
+  BefAft *aft_h;
+  aft_h = allocateHostBefAft(ran_h);
+  // int out1id = out_h[0].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[0].y * ran_h.sr.Txx.x + out_h[0].x;
+  // int out2id = out_h[1].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[1].y * ran_h.sr.Txx.x + out_h[1].x;
+  int out1idvx = out_h[0].z * ran_h.vr.Vx.x * ran_h.vr.Vx.y + out_h[0].y * ran_h.vr.Vx.x + out_h[0].x;
+  int out2idvx = out_h[1].z * ran_h.vr.Vx.x * ran_h.vr.Vx.y + out_h[1].y * ran_h.vr.Vx.x + out_h[1].x;
+  int out1idvy = out_h[0].z * ran_h.vr.Vy.x * ran_h.vr.Vy.y + out_h[0].y * ran_h.vr.Vy.x + out_h[0].x;
+  int out2idvy = out_h[1].z * ran_h.vr.Vy.x * ran_h.vr.Vy.y + out_h[1].y * ran_h.vr.Vy.x + out_h[1].x;
+  int out1idvz = out_h[0].z * ran_h.vr.Vz.x * ran_h.vr.Vz.y + out_h[0].y * ran_h.vr.Vz.x + out_h[0].x;
+  int out2idvz = out_h[1].z * ran_h.vr.Vz.x * ran_h.vr.Vz.y + out_h[1].y * ran_h.vr.Vz.x + out_h[1].x;
   for (int t_h = 0; t_h < tmax_h; t_h++) {
     // printf("ok\n");
     createImpulse<<<1,1>>>(ipa_d, ip_d, dif_d, ran_d, innum_h, t_h);////////
@@ -153,13 +166,22 @@ int main(void) {
     Vel(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);//////////////////////////////
     Sig(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, ipa_d, threads);
     Tau(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);
+
+    // acc
     Acceleration<<<1,1>>>(acc_d, aft_d->va, bef_d->va, dif_d, out_d, ran_d, outnum_h);
+    cudaDeviceSynchronize();
     DimD3DeviceToHost(acc_h, acc_d, outnum_h);
-    swapBefAft(aft_d, bef_d, &ran_h, ran_d, threads);
     for(int i = 0; i < outnum_h; i++) {
-      fprintf(fp, "%.6lf,%.6lf,%.6lf,", acc_h[i].x, acc_h[i].y, acc_h[i].z);
+      fprintf(fp, "%lf,%lf,%lf,", acc_h[i].x, acc_h[i].y, acc_h[i].z);
     }
     fprintf(fp, "\n");
+
+    // v
+    // BefAftDeviceToHost(aft_h, aft_d, ran_h);
+    // fprintf(fp, "%lf,%lf,%lf,%lf,%lf,%lf\n",aft_h->va.Vx[out1idvx],aft_h->va.Vy[out1idvy],aft_h->va.Vz[out1idvz],
+    //                                         aft_h->va.Vx[out2idvx],aft_h->va.Vy[out2idvy],aft_h->va.Vz[out2idvz]);
+
+    swapBefAft(aft_d, bef_d, &ran_h, ran_d, threads);
     progressBar(t_h, tmax_h);
   }
   fclose(fp);
