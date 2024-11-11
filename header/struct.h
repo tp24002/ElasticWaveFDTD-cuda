@@ -4,13 +4,13 @@ typedef struct {
   int x;
   int y;
   int z;
-} Coord;
+} DimI3;
 
 typedef struct {
   double x;
   double y;
   double z;
-} AccCoord;
+} DimD3;
 
 typedef struct {
   double rho;
@@ -28,26 +28,26 @@ typedef struct {
 
 typedef struct {
   Medium med;
-  Coord range;
-  Coord sp;
+  DimI3 range;
+  DimI3 sp;
 } Object;
 
 typedef struct {
-  Coord Txx;
-  Coord Tyy;
-  Coord Tzz;
+  DimI3 Txx;
+  DimI3 Tyy;
+  DimI3 Tzz;
 } SigRan;
 
 typedef struct {
-  Coord Txy;
-  Coord Tyz;
-  Coord Tzx;
+  DimI3 Txy;
+  DimI3 Tyz;
+  DimI3 Tzx;
 } TauRan;
 
 typedef struct {
-  Coord Vx;
-  Coord Vy;
-  Coord Vz;
+  DimI3 Vx;
+  DimI3 Vy;
+  DimI3 Vz;
 } VelRan;
 
 typedef struct {
@@ -57,8 +57,8 @@ typedef struct {
 } Range;
 
 typedef struct {
-  Coord pl1;// min ~ range
-  Coord pl2;// range ~ max
+  DimI3 pl1;// min ~ range
+  DimI3 pl2;// range ~ max
   double ta;
   double fm;
 } Pml;
@@ -71,25 +71,25 @@ typedef struct {
 } Diff;
 
 typedef struct {
-  double *ramda;
-  double *mu;
-  double *c11;
-  double *rho;
-  double *zetaxx;
-  double *zetaxy;
-  double *zetaxz;
-  double *zetayx;
-  double *zetayy;
-  double *zetayz;
-  double *zetazx;
-  double *zetazy;
-  double *zetazz;
-  double *gamma;
-  double *khi;
-  double *xi11;
-  double *zetadx;
-  double *zetady;
-  double *zetadz;
+  double ramda;
+  double mu;
+  double c11;
+  double rho;
+  double zetaxx;
+  double zetaxy;
+  double zetaxz;
+  double zetayx;
+  double zetayy;
+  double zetayz;
+  double zetazx;
+  double zetazy;
+  double zetazz;
+  double gamma;
+  double khi;
+  double xi11;
+  double zetadx;
+  double zetady;
+  double zetadz;
 } MedArr; // 19
 
 typedef struct {
@@ -141,13 +141,17 @@ typedef struct {
 } BefAft;
 
 typedef struct {
-  double *Txx;
-  double *Tyy;
-  double *Tzz;
-  double freq;
+  double Txx;
+  double Tyy;
+  double Tzz;
+} ImpulseArr; // 3
+
+typedef struct {
+  DimI3 in;
   int mode;
-  Coord in;
-} Impulse; // 3
+  double freq;
+} Impulse; 
+
 
 typedef enum { E_AIR = 0, E_CON, E_M_END } E_Mednum;
 typedef enum { E_SINE = 100, E_RCOS } E_KIND_OF_IP;
