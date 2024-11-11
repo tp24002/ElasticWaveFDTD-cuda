@@ -128,14 +128,37 @@ int main(void) {
   }
   printf("time:%d\n", tmax_h);
 
-//   ZeroT<<<ZeroTBlocks,threadsPerBlock>>>(aft_d, ran_d);
-//   ZeroTxy<<<ZeroTxyBlocks,threadsPerBlock>>>(aft_d, ran_d);
-//   ZeroTyz<<<ZeroTyzBlocks,threadsPerBlock>>>(aft_d, ran_d);
-//   ZeroTzx<<<ZeroTzxBlocks,threadsPerBlock>>>(aft_d, ran_d);
-//   ZeroVx<<<ZeroVxBlocks,threadsPerBlock>>>(aft_d, ran_d);
-//   ZeroVy<<<ZeroVyBlocks,threadsPerBlock>>>(aft_d, ran_d);
-//   ZeroVz<<<ZeroVzBlocks,threadsPerBlock>>>(aft_d, ran_d);
-//   cudaDeviceSynchronize();
+  dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
+  dim3 ZeroTBlocks((ran_h.sr.Txx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                   (ran_h.sr.Txx.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                   (ran_h.sr.Txx.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroTxyBlocks((ran_h.tr.Txy.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                     (ran_h.tr.Txy.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                     (ran_h.tr.Txy.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroTyzBlocks((ran_h.tr.Tyz.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                     (ran_h.tr.Tyz.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                     (ran_h.tr.Tyz.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroTzxBlocks((ran_h.tr.Tzx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                     (ran_h.tr.Tzx.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                     (ran_h.tr.Tzx.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroVxBlocks((ran_h.vr.Vx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (ran_h.vr.Vx.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (ran_h.vr.Vx.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroVyBlocks((ran_h.vr.Vy.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (ran_h.vr.Vy.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (ran_h.vr.Vy.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 ZeroVzBlocks((ran_h.vr.Vz.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (ran_h.vr.Vz.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (ran_h.vr.Vz.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
+
+  ZeroT<<<ZeroTBlocks,threadsPerBlock>>>(aft_d->sa, ran_d);
+  ZeroTxy<<<ZeroTxyBlocks,threadsPerBlock>>>(aft_d->ta, ran_d);
+  ZeroTyz<<<ZeroTyzBlocks,threadsPerBlock>>>(aft_d->ta, ran_d);
+  ZeroTzx<<<ZeroTzxBlocks,threadsPerBlock>>>(aft_d->ta, ran_d);
+  ZeroVx<<<ZeroVxBlocks,threadsPerBlock>>>(aft_d->va, ran_d);
+  ZeroVy<<<ZeroVyBlocks,threadsPerBlock>>>(aft_d->va, ran_d);
+  ZeroVz<<<ZeroVzBlocks,threadsPerBlock>>>(aft_d->va, ran_d);
+  cudaDeviceSynchronize();
   FILE *fp;
   char fn[256];
   sprintf(fn, "./clack.csv");
