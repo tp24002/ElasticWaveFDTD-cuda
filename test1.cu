@@ -32,6 +32,7 @@ __global__ void printMedArr(MedArr *ma, Range *ran) {
 void progressBar(int now, int max);
 
 int main(void) {
+  clock_t start = clock();
   int tmax_h;
   int outnum_h, innum_h;
   // 静的変数
@@ -56,7 +57,7 @@ int main(void) {
   DimI3 threads;
 
   // スレッド数
-  initDimI3(&threads, 4, 4, 8);
+  initDimI3(&threads, 8, 8, 8);
   
   // データ格納
   StaticVariable(med_h, &pml_h, &ran_h, &dif_h, &air_h, &con_h, &clack_h, &tmax_h, &outnum_h, &innum_h);
@@ -209,7 +210,11 @@ int main(void) {
   }
   fclose(fp);
   printf("\nloop end.\n");
+  clock_t end = clock();
+  double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
+  printf("実行時間: %lf 秒\n", time_spent);
+  printf("実行時間: %lf 分\n", time_spent / 60);
   return 0;
 }
 

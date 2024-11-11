@@ -20,7 +20,7 @@ __global__ void TxxUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva
 
   int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
 
-  if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if(i < imax && j < jmax && k < kmax) {
     // int idx    = Dgetid<<<1,1>>>(ran->sr.Txx, i, j, k);
     // int idx_i1 = Dgetid<<<1,1>>>(ran->sr.Txx, i + 1, j, k);
     // int idx_j1 = Dgetid<<<1,1>>>(ran->sr.Txx, i, j + 1, k);
@@ -57,7 +57,7 @@ __global__ void TyyUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva
 
   int imax = ran->sr.Tyy.x, jmax = ran->sr.Tyy.y, kmax = ran->sr.Tyy.z;
 
-  if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if(i < imax && j < jmax && k < kmax) {
     // int idx    = Dgetid<<<1,1>>>(ran->sr.Tyy, i, j, k);
     // int idx_i1 = Dgetid<<<1,1>>>(ran->sr.Tyy, i + 1, j, k);
     // int idx_j1 = Dgetid<<<1,1>>>(ran->sr.Tyy, i, j + 1, k);
@@ -93,7 +93,7 @@ __global__ void TzzUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
   int imax = ran->sr.Tzz.x, jmax = ran->sr.Tzz.y, kmax = ran->sr.Tzz.z;
   
-  if(i < imax - 1 && j < jmax - 1 && k < kmax - 1) {
+  if(i < imax && j < jmax && k < kmax) {
     // int idx     = Dgetid<<<1,1>>>(ran->sr.Tzz, i, j, k);
     // int idx_im1 = Dgetid<<<1,1>>>(ran->sr.Tzz, i + 1, j, k);
     // int idx_jm1 = Dgetid<<<1,1>>>(ran->sr.Tzz, i, j + 1, k);
@@ -184,9 +184,9 @@ void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   int Txximax = ran_h->sr.Txx.x, Txxjmax = ran_h->sr.Txx.y, Txxkmax = ran_h->sr.Txx.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
-  dim3 UpdateBlocks((Txximax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Txxjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Txxkmax - 2 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 UpdateBlocks((Txximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Txxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Txxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroXYBlocks((Txximax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txxjmax     + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroYZBlocks((Txxjmax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txxkmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroZXBlocks((Txxkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txximax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
@@ -217,9 +217,9 @@ void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   int Tyyimax = ran_h->sr.Tyy.x, Tyyjmax = ran_h->sr.Tyy.y, Tyykmax = ran_h->sr.Tyy.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
-  dim3 UpdateBlocks((Tyyimax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Tyyjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Tyykmax - 2 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 UpdateBlocks((Tyyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Tyyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Tyykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroXYBlocks((Tyyimax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyyjmax     + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroYZBlocks((Tyyjmax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyykmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroZXBlocks((Tyykmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyyimax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
@@ -249,9 +249,9 @@ void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   int Tzzimax = ran_h->sr.Tzz.x, Tzzjmax = ran_h->sr.Tzz.y, Tzzkmax = ran_h->sr.Tzz.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
-  dim3 UpdateBlocks((Tzzimax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Tzzjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Tzzkmax - 2 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 UpdateBlocks((Tzzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Tzzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Tzzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroXYBlocks((Tzzimax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzzjmax     + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroYZBlocks((Tzzjmax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzzkmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroZXBlocks((Tzzkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzzimax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
@@ -292,7 +292,7 @@ __global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
   // int imax = ran->tr.Txy.x, jmax = ran->tr.Txy.y, kmax = ran->tr.Txy.z;
   double Hzetadx, Hzetady, Hmu, Hgamma;
 
-  if (i < ran->tr.Txy.x - 1 && j < ran->tr.Txy.y - 1 && k < ran->tr.Txy.z - 1) {
+  if (i < ran->tr.Txy.x && j < ran->tr.Txy.y && k < ran->tr.Txy.z) {
     // 各インデックスの計算
     // int idtxy = Dgetid<<<1,1>>>(ran->tr.Txy, i, j, k);
 
@@ -347,7 +347,7 @@ __global__ void TyzUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
   // int imax = ran->tr.Tyz.x, jmax = ran->tr.Tyz.y, kmax = ran->tr.Tyz.z;
   double Hzetady, Hzetadz, Hmu, Hgamma;
 
-  if (i < ran->tr.Tyz.x - 1 && j < ran->tr.Tyz.y - 1 && k < ran->tr.Tyz.z - 1) {
+  if (i < ran->tr.Tyz.x && j < ran->tr.Tyz.y && k < ran->tr.Tyz.z) {
     // 各インデックスの計算
     // int idtyz = Dgetid<<<1,1>>>(ran->tr.Tyz, i, j, k);
 
@@ -401,7 +401,7 @@ __global__ void TzxUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
 
   double Hzetadx, Hzetadz, Hmu, Hgamma;
 
-  if (i < ran->tr.Tzx.x - 1 && j < ran->tr.Tzx.y - 1 && k < ran->tr.Tzx.z - 1) {
+  if (i < ran->tr.Tzx.x && j < ran->tr.Tzx.y && k < ran->tr.Tzx.z) {
     // 各インデックスの計算
     // 求めるTzx
     int idtzx  = k * ran->tr.Tzx.x * ran->tr.Tzx.y + j * ran->tr.Tzx.x + i;
@@ -459,9 +459,9 @@ void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   // cudaError_t err;
   int Txyimax = ran_h->tr.Txy.x, Txyjmax = ran_h->tr.Txy.y, Txykmax = ran_h->tr.Txy.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
-  dim3 UpdateBlocks((Txyimax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Txyjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Txykmax - 2 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 UpdateBlocks((Txyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Txyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Txykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroXYBlocks((Txyimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txyjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
   dim3 DirectionalAddBlocks((Txyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Txyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
@@ -485,9 +485,9 @@ void Tyz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   // cudaError_t err;
   int Tyzimax = ran_h->tr.Tyz.x, Tyzjmax = ran_h->tr.Tyz.y, Tyzkmax = ran_h->tr.Tyz.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
-  dim3 UpdateBlocks((Tyzimax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Tyzjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Tyzkmax - 2 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 UpdateBlocks((Tyzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Tyzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Tyzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroYZBlocks((Tyzjmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyzkmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
   dim3 DirectionalAddBlocks((Tyzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Tyzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
@@ -509,9 +509,9 @@ void Tzx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   // cudaError_t err;
   int Tzximax = ran_h->tr.Tzx.x, Tzxjmax = ran_h->tr.Tzx.y, Tzxkmax = ran_h->tr.Tzx.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
-  dim3 UpdateBlocks((Tzximax - 2 + threadsPerBlock.x - 1)     / threadsPerBlock.x,
-                    (Tzxjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Tzxkmax - 2 + threadsPerBlock.z - 1)     / threadsPerBlock.z);
+  dim3 UpdateBlocks((Tzximax + threadsPerBlock.x - 1)     / threadsPerBlock.x,
+                    (Tzxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Tzxkmax + threadsPerBlock.z - 1)     / threadsPerBlock.z);
   // dim3 ZeroZXBlocks((Tzxkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzximax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);   
   dim3 DirectionalAddBlocks((Tzximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Tzxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
@@ -546,7 +546,7 @@ __global__ void VxUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
 
   double Azetaxx, Azetaxy, Azetaxz, Arho;
 
-  if(i < ran->vr.Vx.x - 1 && j < ran->vr.Vx.y - 1 && k < ran->vr.Vx.z - 1) {
+  if(i < ran->vr.Vx.x && j < ran->vr.Vx.y && k < ran->vr.Vx.z) {
 
     int idvx   =       k * ran->vr.Vx.x  * ran->vr.Vx.y  +       j * ran->vr.Vx.x  + i;
     int idtxx  =       k * ran->sr.Txx.x * ran->sr.Txx.y +       j * ran->sr.Txx.x + i;
@@ -584,7 +584,7 @@ __global__ void VyUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
   // int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
   double Azetayx, Azetayy, Azetayz, Arho;
 
-  if (i < ran->vr.Vy.x - 1 && j < ran->vr.Vy.y - 1 && k < ran->vr.Vy.z - 1) {
+  if (i < ran->vr.Vy.x && j < ran->vr.Vy.y && k < ran->vr.Vy.z) {
     // 各インデックスの計算
     int idvy   = k * ran->vr.Vy.x * ran->vr.Vy.y + j * ran->vr.Vy.x + i;
     int idtyy  = k * ran->sr.Tyy.x * ran->sr.Tyy.y + j * ran->sr.Tyy.x + i;
@@ -628,7 +628,7 @@ __global__ void VzUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
 
   double Azetazx, Azetazy, Azetazz, Arho;
 
-  if(i < ran->vr.Vz.x - 1 && j < ran->vr.Vz.y - 1 && k < ran->vr.Vz.z - 1) {
+  if(i < ran->vr.Vz.x && j < ran->vr.Vz.y && k < ran->vr.Vz.z) {
     // 1D indexing for 3D arrays
     int idvz   = k * ran->vr.Vz.x * ran->vr.Vz.y + j * ran->vr.Vz.x + i;
     int idtzz  = k * ran->sr.Tzz.x * ran->sr.Tzz.y + j * ran->sr.Tzz.x + i;
@@ -682,9 +682,9 @@ __global__ void DirectionalAddV(VelArr aftva, Range *ran, char check) {
 void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
   int Vximax = ran_h->vr.Vx.x, Vxjmax = ran_h->vr.Vx.y, Vxkmax = ran_h->vr.Vx.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
-  dim3 UpdateBlocks((Vximax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Vxjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Vxkmax - 2 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 UpdateBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Vxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Vxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroXYBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x, 
   //                   (Vxjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroXZBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x, 
@@ -713,9 +713,9 @@ void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   int Vyimax = ran_h->vr.Vy.x, Vyjmax = ran_h->vr.Vy.y, Vykmax = ran_h->vr.Vy.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
-  dim3 UpdateBlocks((Vyimax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Vyjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Vykmax - 2 + threadsPerBlock.z - 1) / threadsPerBlock.z);
+  dim3 UpdateBlocks((Vyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Vyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Vykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroYXBlocks((Vyimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, 
   //                   (Vyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroYZBlocks((Vyjmax + threadsPerBlock.x - 1) / threadsPerBlock.x, 
@@ -745,9 +745,9 @@ void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   int Vzimax = ran_h->vr.Vz.x, Vzjmax = ran_h->vr.Vz.y, Vzkmax = ran_h->vr.Vz.z;
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
-  dim3 UpdateBlocks((Vzimax - 2 + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                    (Vzjmax - 2 + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Vzkmax - 2 + threadsPerBlock.z - 1)     / threadsPerBlock.z);
+  dim3 UpdateBlocks((Vzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                    (Vzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                    (Vzkmax + threadsPerBlock.z - 1)     / threadsPerBlock.z);
   // dim3 ZeroZXBlocks((Vzimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, 
   //                   (Vzkmax + threadsPerBlock.y - 1) / threadsPerBlock.y);
   // dim3 ZeroZYBlocks((Vzjmax + threadsPerBlock.x - 1) / threadsPerBlock.x, 

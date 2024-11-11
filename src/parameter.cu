@@ -73,8 +73,8 @@ void DynamicVariable(DimD3 *acc, MedArr *ma, Impulse *ip, Range ran, Object air,
   // 1～で7番目，仮想セルで+1，pml層数で+pml，配列番号化で-1
   // initDimI3(&out[0], ip[0].in.x - 5 + 1 + pml.pl1.x - 1, ip[0].in.y + 1 + pml.pl1.y - 1, ip[0].in.z + 1 + pml.pl1.z - 1);
   // initDimI3(&out[1], ip[0].in.x + 5 + 1 + pml.pl1.x - 1, ip[0].in.y + 1 + pml.pl1.y - 1, ip[0].in.z + 1 + pml.pl1.z - 1);
-  initDimI3(&out[0], ip[0].in.x, ip[0].in.y, ip[0].in.z - 5);
-  initDimI3(&out[1], ip[0].in.x, ip[0].in.y, ip[0].in.z + 5);
+  initDimI3(&out[0], ip[0].in.x - 5, ip[0].in.y, ip[0].in.z);
+  initDimI3(&out[1], ip[0].in.x + 5, ip[0].in.y, ip[0].in.z);
 }
 
 void insertDimD3(DimD3 *dd3, int outnum) {
