@@ -279,7 +279,6 @@ void insertPml(MedArr *ma, Pml pml, Range ran) {
           ma[idx].zetazy += zeta_max * pow(((double)j + 1 - (double)(Txxjmax - 1 - ply2)) / (double)ply2, ta);
           ma[idx].zetady = ma[idx].zetaxy / ma[idx].rho;
         }
-        
       }
     }
   }

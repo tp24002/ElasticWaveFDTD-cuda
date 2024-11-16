@@ -137,9 +137,9 @@ BefAft* allocateDeviceBefAft(Range ran) {
 
 ImpulseArr* allocateDeviceImpulseArr(Range ran) {
     ImpulseArr *ipa;
-    int celltxx = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    int cell = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
     ipa = (ImpulseArr*)malloc(sizeof(ImpulseArr));
-    cudaError_t err = cudaMalloc(&ipa, celltxx * sizeof(ImpulseArr));
+    cudaError_t err = cudaMalloc(&ipa, cell * sizeof(ImpulseArr));
     printf("allocateDeviceImpulseArr:%s\n", cudaGetErrorString(err));
     return ipa;
 }
@@ -178,8 +178,8 @@ void DiffHostToDevice(Diff *dif_d, Diff *dif_h) {
 }
 
 void MedArrHostToDevice(MedArr *ma_d, MedArr *ma_h, Range ran) {
-    int celltxx = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
-    cudaMemcpy(ma_d, ma_h, celltxx * sizeof(MedArr), cudaMemcpyHostToDevice);
+    int cell = ran.sr.Txx.x * ran.sr.Txx.y * ran.sr.Txx.z;
+    cudaMemcpy(ma_d, ma_h, cell * sizeof(MedArr), cudaMemcpyHostToDevice);
 }
 
 void ImpulseHostToDevice(Impulse *ip_d, Impulse *ip_h, int innum) {
