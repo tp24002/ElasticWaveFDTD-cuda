@@ -180,7 +180,7 @@ void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 // Tyyクラス的な(Blocks大丈夫かな？)
 void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, ImpulseArr *ipa_d, DimI3 threads) {
   // cudaError_t err;
-  char check = 'Y';
+  // char check = 'Y';
 
   int Tyyimax = ran_h->sr.Tyy.x, Tyyjmax = ran_h->sr.Tyy.y, Tyykmax = ran_h->sr.Tyy.z;
 
@@ -212,7 +212,7 @@ void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 // Tzzクラス的な(Blocks大丈夫かな？)
 void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, ImpulseArr *ipa_d, DimI3 threads) {
   // cudaError_t err;
-  char check = 'Z';
+  // char check = 'Z';
 
   int Tzzimax = ran_h->sr.Tzz.x, Tzzjmax = ran_h->sr.Tzz.y, Tzzkmax = ran_h->sr.Tzz.z;
 
@@ -265,7 +265,7 @@ __global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
   int vyi = ran->vr.Vy.x, vyj = ran->vr.Vy.y;
   if (i < txyi && j < txyj && k < txyk) {
     // 各インデックスの計算
-    int idtxy = k * ran->tr.Txy.x * ran->tr.Txy.y + j * ran->tr.Txy.x + i;
+    int idtxy = k * txyi * txyj + j * txyi + i;
 
     int idtxx   = k * txxi * txxj + j * txxi + i;
     int idtxxi  = k * txxi * txxj + j * txxi + (i - 1);
@@ -286,7 +286,7 @@ __global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
     // 第1粘性定数
     Hgamma = 4. * pow((1. / ma[idtxx].gamma) + (1. / ma[idtxxi].gamma) + (1. / ma[idtxxj].gamma) + (1. / ma[idtxxij].gamma), -1.);
 
-
+    // if(aftva.Vy[idvy] != 0.0) printf("%lf\n", aftva.Vy[idvy]);
     aftta.Txyx[idtxy] = (2.0 - Hzetadx * dif->dt) / (2.0 + Hzetadx * dif->dt) * befta.Txyx[idtxy]
         + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadx * dif->dt) * (aftva.Vy[idvy] - aftva.Vy[idvyi]) / dif->dx
         - 2.0 * Hgamma / (2.0 + Hzetadx * dif->dt) * (befva.Vy[idvy] - befva.Vy[idvyi]) / dif->dx;
@@ -295,6 +295,7 @@ __global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
         + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetady * dif->dt) * (aftva.Vx[idvx] - aftva.Vx[idvxj]) / dif->dy
         - 2.0 * Hgamma / (2.0 + Hzetady * dif->dt) * (befva.Vx[idvx] - befva.Vx[idvxj]) / dif->dy;
     aftta.Txy[idtxy] = aftta.Txyx[idtxy] + aftta.Txyy[idtxy];
+    // if(i == 40 && j == 40 && k == 40) printf("%lf\n",aftta.Txy[idtxy]);
   }
 }
 
@@ -342,6 +343,7 @@ __global__ void TyzUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
         - 2.0 * Hgamma / (2.0 + Hzetadz * dif->dt) * (befva.Vy[idvy] - befva.Vy[idvyk]) / dif->dz;
     aftta.Tyz[idtyz] = aftta.Tyzy[idtyz] + aftta.Tyzz[idtyz];
     
+    // if(i == 40 && j == 40 && k == 40) printf("%lf\n",aftta.Tyz[idtyz]);
   }
 }
 
@@ -387,7 +389,9 @@ __global__ void TzxUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
         + 2.0 * (Hmu * dif->dt + Hgamma) / (2.0 + Hzetadx * dif->dt) * (aftva.Vz[idvz] - aftva.Vz[idvzi]) / dif->dx
         - 2.0 * Hgamma / (2.0 + Hzetadx * dif->dt) * (befva.Vz[idvz] - befva.Vz[idvzi]) / dif->dx;
     aftta.Tzx[idtzx] = aftta.Tzxx[idtzx] + aftta.Tzxz[idtzx];
-  }
+    if(i == 40 && j == 40 && k == 40) printf("%lf\n",aftta.Tzx[idtzx]);
+  }    
+
 }
 
 // Txyクラス的な
@@ -445,9 +449,9 @@ void Tzx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   // cudaError_t err;
   int Tzximax = ran_h->tr.Tzx.x, Tzxjmax = ran_h->tr.Tzx.y, Tzxkmax = ran_h->tr.Tzx.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
-  dim3 UpdateBlocks((Tzximax + threadsPerBlock.x - 1)     / threadsPerBlock.x,
+  dim3 UpdateBlocks((Tzximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Tzxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Tzxkmax + threadsPerBlock.z - 1)     / threadsPerBlock.z);
+                    (Tzxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // dim3 ZeroZXBlocks((Tzxkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzximax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);   
   dim3 DirectionalAddBlocks((Tzximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                             (Tzxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
@@ -486,7 +490,6 @@ __global__ void VxUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
   int txyi = ran->tr.Txy.x, txyj = ran->tr.Txy.y;
   int tzxi = ran->tr.Tzx.x, tzxj = ran->tr.Tzx.y;
   if(i < vxi && j < vxj && k < vxk) {
-
     int idvx   = k * vxi * vxj + j * vxi + i;
     int idtxx  = k * txxi * txxj + j * txxi + i;
     int idtxxi = k * txxi * txxj + j * txxi + (i - 1);
@@ -721,11 +724,11 @@ __global__ void swapTxx(SigArr aftsa, SigArr befsa, Range *ran) {
   int k = blockIdx.z * blockDim.z + threadIdx.z;
   int Txximax = ran->sr.Txx.x, Txxjmax = ran->sr.Txx.y, Txxkmax = ran->sr.Txx.z;
   if (i < Txximax && j < Txxjmax && k < Txxkmax) {
-    int idx_Txx = k * Txximax * Txxjmax + j * Txximax + i;
-    befsa.Txx[idx_Txx]  = aftsa.Txx[idx_Txx];
-    befsa.Txxx[idx_Txx] = aftsa.Txxx[idx_Txx];
-    befsa.Txxy[idx_Txx] = aftsa.Txxy[idx_Txx];
-    befsa.Txxz[idx_Txx] = aftsa.Txxz[idx_Txx];
+    int idtxx = k * Txximax * Txxjmax + j * Txximax + i;
+    befsa.Txx[idtxx]  = aftsa.Txx[idtxx];
+    befsa.Txxx[idtxx] = aftsa.Txxx[idtxx];
+    befsa.Txxy[idtxx] = aftsa.Txxy[idtxx];
+    befsa.Txxz[idtxx] = aftsa.Txxz[idtxx];
   }
 }
 
@@ -736,11 +739,11 @@ __global__ void swapTyy(SigArr aftsa, SigArr befsa, Range *ran) {
   int Tyyimax = ran->sr.Tyy.x, Tyyjmax = ran->sr.Tyy.y, Tyykmax = ran->sr.Tyy.z;
   
   if (i < Tyyimax && j < Tyyjmax && k < Tyykmax) {
-    int idx_Tyy = k * Tyyimax * Tyyjmax + j * Tyyimax + i;
-    befsa.Tyy[idx_Tyy]  = aftsa.Tyy[idx_Tyy];
-    befsa.Tyyx[idx_Tyy] = aftsa.Tyyx[idx_Tyy];
-    befsa.Tyyy[idx_Tyy] = aftsa.Tyyy[idx_Tyy];
-    befsa.Tyyz[idx_Tyy] = aftsa.Tyyz[idx_Tyy];
+    int idtyy = k * Tyyimax * Tyyjmax + j * Tyyimax + i;
+    befsa.Tyy[idtyy]  = aftsa.Tyy[idtyy];
+    befsa.Tyyx[idtyy] = aftsa.Tyyx[idtyy];
+    befsa.Tyyy[idtyy] = aftsa.Tyyy[idtyy];
+    befsa.Tyyz[idtyy] = aftsa.Tyyz[idtyy];
   }
 }
 
@@ -751,11 +754,11 @@ __global__ void swapTzz(SigArr aftsa, SigArr befsa, Range *ran) {
   int Tzzimax = ran->sr.Tzz.x, Tzzjmax = ran->sr.Tzz.y, Tzzkmax = ran->sr.Tzz.z;
 
   if (i < Tzzimax && j < Tzzjmax && k < Tzzkmax) {
-    int idx_Tzz = k * Tzzimax * Tzzjmax + j * Tzzimax + i;
-    befsa.Tzz [idx_Tzz] = aftsa.Tzz[idx_Tzz];
-    befsa.Tzzx[idx_Tzz] = aftsa.Tzzx[idx_Tzz];
-    befsa.Tzzy[idx_Tzz] = aftsa.Tzzy[idx_Tzz];
-    befsa.Tzzz[idx_Tzz] = aftsa.Tzzz[idx_Tzz];
+    int idtzz = k * Tzzimax * Tzzjmax + j * Tzzimax + i;
+    befsa.Tzz [idtzz] = aftsa.Tzz[idtzz];
+    befsa.Tzzx[idtzz] = aftsa.Tzzx[idtzz];
+    befsa.Tzzy[idtzz] = aftsa.Tzzy[idtzz];
+    befsa.Tzzz[idtzz] = aftsa.Tzzz[idtzz];
   }
 }
 
@@ -766,10 +769,10 @@ __global__ void swapTxy(TauArr aftta, TauArr befta, Range *ran) {
   int Txyimax = ran->tr.Txy.x, Txyjmax = ran->tr.Txy.y, Txykmax = ran->tr.Txy.z;
 
   if (i < Txyimax && j < Txyjmax && k < Txykmax) {
-    int idx_Txy = k * Txyimax * Txyjmax + j * Txyimax + i;
-    befta.Txy [idx_Txy] = aftta.Txy[idx_Txy];
-    befta.Txyx[idx_Txy] = aftta.Txyx[idx_Txy];
-    befta.Txyy[idx_Txy] = aftta.Txyy[idx_Txy];
+    int idtxy = k * Txyimax * Txyjmax + j * Txyimax + i;
+    befta.Txy [idtxy] = aftta.Txy[idtxy];
+    befta.Txyx[idtxy] = aftta.Txyx[idtxy];
+    befta.Txyy[idtxy] = aftta.Txyy[idtxy];
   }
 }
 
@@ -780,10 +783,10 @@ __global__ void swapTyz(TauArr aftta, TauArr befta, Range *ran) {
   int Tyzimax = ran->tr.Tyz.x, Tyzjmax = ran->tr.Tyz.y, Tyzkmax = ran->tr.Tyz.z;
 
   if (i < Tyzimax && j < Tyzjmax && k < Tyzkmax) {
-    int idx_Tyz = k * Tyzimax * Tyzjmax + j * Tyzimax + i;
-    befta.Tyz [idx_Tyz] = aftta.Tyz[idx_Tyz];
-    befta.Tyzy[idx_Tyz] = aftta.Tyzy[idx_Tyz];
-    befta.Tyzz[idx_Tyz] = aftta.Tyzz[idx_Tyz];
+    int idtyz = k * Tyzimax * Tyzjmax + j * Tyzimax + i;
+    befta.Tyz [idtyz] = aftta.Tyz[idtyz];
+    befta.Tyzy[idtyz] = aftta.Tyzy[idtyz];
+    befta.Tyzz[idtyz] = aftta.Tyzz[idtyz];
   }
 }
 
@@ -794,10 +797,10 @@ __global__ void swapTzx(TauArr aftta, TauArr befta, Range *ran) {
   int Tzximax = ran->tr.Tzx.x, Tzxjmax = ran->tr.Tzx.y, Tzxkmax = ran->tr.Tzx.z;
   
   if (i < Tzximax && j < Tzxjmax && k < Tzxkmax) {
-    int idx_Tzx = k * Tzximax * Tzxjmax + j * Tzximax + i;
-    befta.Tzx [idx_Tzx] = aftta.Tzx[idx_Tzx];
-    befta.Tzxz[idx_Tzx] = aftta.Tzxz[idx_Tzx];
-    befta.Tzxx[idx_Tzx] = aftta.Tzxx[idx_Tzx];
+    int idtzx = k * Tzximax * Tzxjmax + j * Tzximax + i;
+    befta.Tzx [idtzx] = aftta.Tzx[idtzx];
+    befta.Tzxz[idtzx] = aftta.Tzxz[idtzx];
+    befta.Tzxx[idtzx] = aftta.Tzxx[idtzx];
   }
 }
 
@@ -808,11 +811,11 @@ __global__ void swapVx(VelArr aftva, VelArr befva, Range *ran) {
   int Vximax = ran->vr.Vx.x, Vxjmax = ran->vr.Vx.y, Vxkmax = ran->vr.Vx.z;
   
   if (i < Vximax && j < Vxjmax && k < Vxkmax) {
-    int idx_Vx = k * Vximax * Vxjmax + j * Vximax + i;
-    befva.Vx [idx_Vx] = aftva.Vx[idx_Vx];
-    befva.Vxx[idx_Vx] = aftva.Vxx[idx_Vx];
-    befva.Vxy[idx_Vx] = aftva.Vxy[idx_Vx];
-    befva.Vxz[idx_Vx] = aftva.Vxz[idx_Vx];
+    int idvx = k * Vximax * Vxjmax + j * Vximax + i;
+    befva.Vx [idvx] = aftva.Vx[idvx];
+    befva.Vxx[idvx] = aftva.Vxx[idvx];
+    befva.Vxy[idvx] = aftva.Vxy[idvx];
+    befva.Vxz[idvx] = aftva.Vxz[idvx];
   }
 }
 
@@ -823,11 +826,11 @@ __global__ void swapVy(VelArr aftva, VelArr befva, Range *ran) {
   int Vyimax = ran->vr.Vy.x, Vyjmax = ran->vr.Vy.y, Vykmax = ran->vr.Vy.z;
   
   if (i < Vyimax && j < Vyjmax && k < Vykmax) {
-    int idx_Vy = k * Vyimax * Vyjmax + j * Vyimax + i;
-    befva.Vy [idx_Vy] = aftva.Vy[idx_Vy];
-    befva.Vyx[idx_Vy] = aftva.Vyx[idx_Vy];
-    befva.Vyy[idx_Vy] = aftva.Vyy[idx_Vy];
-    befva.Vyz[idx_Vy] = aftva.Vyz[idx_Vy];
+    int idvy = k * Vyimax * Vyjmax + j * Vyimax + i;
+    befva.Vy [idvy] = aftva.Vy[idvy];
+    befva.Vyx[idvy] = aftva.Vyx[idvy];
+    befva.Vyy[idvy] = aftva.Vyy[idvy];
+    befva.Vyz[idvy] = aftva.Vyz[idvy];
   }
 }
 
@@ -838,11 +841,11 @@ __global__ void swapVz(VelArr aftva, VelArr befva, Range *ran) {
   int Vzimax = ran->vr.Vz.x, Vzjmax = ran->vr.Vz.y, Vzkmax = ran->vr.Vz.z;
   
   if (i < Vzimax && j < Vzjmax && k < Vzkmax) {
-    int idx_Vz = k * Vzimax * Vzjmax + j * Vzimax + i;
-    befva.Vz [idx_Vz] = aftva.Vz[idx_Vz];
-    befva.Vzx[idx_Vz] = aftva.Vzx[idx_Vz];
-    befva.Vzy[idx_Vz] = aftva.Vzy[idx_Vz];
-    befva.Vzz[idx_Vz] = aftva.Vzz[idx_Vz];
+    int idvz = k * Vzimax * Vzjmax + j * Vzimax + i;
+    befva.Vz [idvz] = aftva.Vz[idvz];
+    befva.Vzx[idvz] = aftva.Vzx[idvz];
+    befva.Vzy[idvz] = aftva.Vzy[idvz];
+    befva.Vzz[idvz] = aftva.Vzz[idvz];
   }
 }
 

@@ -14,7 +14,8 @@
 void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, Object *con, Object *clack, int *tmax, int *outnum, int *innum) {
   // 入力
   DimI3 region;
-  initDimI3(&region, 15 * 3, 15 * 3, 15 * 3);
+  initDimI3(&region, 15, 15, 15);
+  // initDimI3(&region, 15 * 3, 15 * 3, 15 * 3);
   DimI3 con_start;
   DimI3 con_ran;
   initDimI3(&con_start, 3, 3, 3);
@@ -23,9 +24,11 @@ void StaticVariable(Medium *med, Pml *pml, Range *ran, Diff *dif, Object *air, O
   DimI3 clack_ran;
   initDimI3(&clack_start, 3, 3, 3);
   initDimI3(&clack_ran, 0, 0, 0);
+  // *tmax = 8192;
   *tmax = 32768;
   // *tmax = 131072;
-  *outnum = 2;
+  *outnum = 15;
+  // *outnum = 2;
   *innum = 1;
 
   // med
@@ -65,7 +68,7 @@ void DynamicVariable(DimD3 *acc, MedArr *ma, Impulse *ip, Range ran, Object air,
   insertPml(ma, pml, ran);
   // ip
   initDimI3(&ip[0].in, 8 + 1 + pml.pl1.x - 1, 8 + 1 + pml.pl1.y - 1, 8 + 1 + pml.pl1.z - 1);//pml
-  ip->freq = 2e6;
+  ip->freq = 1.e5;
   ip->mode = E_SINE;
   // ip->mode = E_RCOS;
   // out
@@ -75,6 +78,9 @@ void DynamicVariable(DimD3 *acc, MedArr *ma, Impulse *ip, Range ran, Object air,
   // initDimI3(&out[1], ip[0].in.x + 5 + 1 + pml.pl1.x - 1, ip[0].in.y + 1 + pml.pl1.y - 1, ip[0].in.z + 1 + pml.pl1.z - 1);
   initDimI3(&out[0], ip[0].in.x - 5, ip[0].in.y, ip[0].in.z);
   initDimI3(&out[1], ip[0].in.x + 5, ip[0].in.y, ip[0].in.z);
+  for(int i = - 7; i < outnum - 7; i++) {
+    initDimI3(&out[7 + i], ip[0].in.x, ip[0].in.y, ip[0].in.z + i);
+  }
 }
 
 void insertDimD3(DimD3 *dd3, int outnum) {
@@ -133,7 +139,6 @@ void insertConcrete(MedArr *ma, Object con, Range ran) {
   int nx = ran.sr.Txx.x;
   int ny = ran.sr.Txx.y;
 
-  printf("ok\n");
   for (k = con.sp.z + 1; k < Z; k++) {
     for (j = con.sp.y + 1; j < Y; j++) {
       for (i = con.sp.x + 1; i < X; i++) {

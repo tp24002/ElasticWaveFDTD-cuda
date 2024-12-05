@@ -53,9 +53,9 @@ void initMedium(Medium *med) {
 }
 
 void initDiff(Diff *dif, Medium *med) {
-  dif->dx = 0.001;
-  dif->dy = 0.001;
-  dif->dz = 0.001;
+  dif->dx = 0.005;
+  dif->dy = 0.005;
+  dif->dz = 0.005;
   double tmp = 0;
   
   for(int i = E_AIR; i < E_M_END; i++){
