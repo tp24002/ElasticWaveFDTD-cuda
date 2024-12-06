@@ -9,10 +9,31 @@
 #include "./header/update.h"
 #include "./header/parameter.h"
 #include "./header/memory.h"
+#include "./header/visualization.h"
+
+__global__ void printDeviceValueInt(int d) {
+    printf("Device value: %d\n", d);
+}
+
+__global__ void printDeviceValueDouble(double d) {
+    printf("Device value: %lf\n", d);
+}
+
+__global__ void printMedArr(MedArr *ma, Range *ran) {
+  // printf("%d,%d,%d\n", ran->sr.Txx.x, ran->sr.Txx.y, ran->sr.Txx.z);
+  for(int i = 0; i < ran->sr.Txx.x; i++) {
+    for(int j = 0; j < ran->sr.Txx.y; j++) {
+      int idx = 68 * ran->sr.Txx.x * ran->sr.Txx.y + j * ran->sr.Txx.x + i;
+      printf("%lf ", ma[idx].rho);
+    }
+    printf("\n");
+  }
+}
 
 void progressBar(int now, int max);
 
 int main(void) {
+  clock_t start = clock();
   int tmax_h;
   int outnum_h, innum_h;
   // 静的変数
@@ -37,7 +58,7 @@ int main(void) {
   DimI3 threads;
 
   // スレッド数
-  initDimI3(&threads, 4, 4, 8);
+  initDimI3(&threads, 8, 8, 8);
   
   // データ格納
   StaticVariable(med_h, &pml_h, &ran_h, &dif_h, &air_h, &con_h, &clack_h, &tmax_h, &outnum_h, &innum_h);
@@ -67,8 +88,47 @@ int main(void) {
   MedArrHostToDevice(ma_d, ma_h, ran_h);
   ImpulseHostToDevice(ip_d, ip_h, innum_h);
   DimI3HostToDevice(out_d, out_h, outnum_h);
-
+  FILE *fp1;
+  char fn1[256];
+  sprintf(fn1,"./ma.csv");
+  fp1 = fopen(fn1, "w");
+  for(int i = 0; i < ran_h.sr.Txx.x; i++) {
+    for(int j = 0; j < ran_h.sr.Txx.y; j++) {
+      int idx = (pml_h.pl1.x + 5) * ran_h.sr.Txx.x * ran_h.sr.Txx.y + j * ran_h.sr.Txx.x + i;
+      fprintf(fp1, "%lf,", ma_h[idx].zetaxx);
+    }
+    fprintf(fp1, "\n");
+  }
+  fclose(fp1);
   free(ma_h);
+
+  // 出力
+  // Medium
+  for(int i = 0; i < E_M_END; i++) {
+    printf("Med[rho]:%f\n", med_h[i].rho);
+  }
+  // Pml
+  printf("pml.fm:%le\n", pml_h.fm);
+  printf("pml.ta:%lf\n", pml_h.ta);
+  // Range
+  printf("Range:%d,%d,%d\n", ran_h.sr.Txx.x, ran_h.sr.Txx.y, ran_h.sr.Txx.z);
+  // Diff
+  printf("sp   diff:%le,%le,%le\n", dif_h.dx, dif_h.dy, dif_h.dz);
+  printf("time diff:%le\n", dif_h.dt);
+  // Impulse
+  for(int i = 0; i < innum_h; i++) {
+    if(ip_h[i].mode == E_SINE) {
+      printf("ip:%le(sin)\n", ip_h[i].freq);
+    } else {
+      printf("ip:%le(cos)\n", ip_h[i].freq);
+    }
+    printf("in[%d]:%d,%d,%d\n", i, ip_h[i].in.x, ip_h[i].in.y, ip_h[i].in.z);
+  }
+  
+  for(int i = 0; i < outnum_h; i++) {
+    printf("out[%d]:%d,%d,%d\n", i, out_h[i].x, out_h[i].y, out_h[i].z);
+  }
+  printf("time:%d\n", tmax_h);
 
   dim3 threadsPerBlock(threads.x, threads.y, threads.z);  // ブロック内のスレッド数
   dim3 ZeroTBlocks((ran_h.sr.Txx.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
@@ -93,79 +153,47 @@ int main(void) {
                     (ran_h.vr.Vz.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (ran_h.vr.Vz.z + threadsPerBlock.z - 1) / threadsPerBlock.z);
 
-  // 出力
-  // Medium
-  for(int i = 0; i < E_M_END; i++) {
-    printf("Med:%f\n", med_h[i].rho);
-  }
-  // Pml
-  printf("pml.fm:%f\n", pml_h.fm);
-  printf("pml.ta:%f\n", pml_h.ta);
-  // Range
-  printf("Range:%d,%d,%d\n", ran_h.sr.Txx.x, ran_h.sr.Txx.y, ran_h.sr.Txx.z);
-  // Diff
-  printf("sp   diff:%f,%f,%f\n", dif_h.dx, dif_h.dy, dif_h.dz);
-  printf("time diff:%e\n", dif_h.dt);
-  // Impulse
-  for(int i = 0; i < innum_h; i++) {
-    if(ip_h[i].mode == E_SINE) {
-      printf("ip:%lf(sin)\n", ip_h[i].freq);
-    } else {
-      printf("ip:%lf(cos)\n", ip_h[i].freq);
-    }
-    printf("in[%d]:%d,%d,%d\n", i, ip_h[i].in.x, ip_h[i].in.y, ip_h[i].in.z);
-  }
-  
-  for(int i = 0; i < outnum_h; i++) {
-    printf("out[%d]:%d,%d,%d\n", i, out_h[i].x, out_h[i].y, out_h[i].z);
-  }
-  printf("time:%d\n", tmax_h);
-
-  ///////////clack
-  // ratio = 10;
-  // max_Patern = con_size.x * con_size.y * con_size.z;
-  // // max_ClackPatern = (con_size.x - 2) * (con_size.y - 2) * (con_size.z - 2);
-  // clack_count = max_Patern * ratio / 100;
-  // if(ratio != 0){
-  //   clack = (Object *)malloc(sizeof(Object) * clack_count);
-  //   printf("clackhalfok\n");
-  //   initClack(clack,med[E_AIR], &pml, clack_st.x, clack_st.y, clack_st.z, clack_size.x, clack_size.y, clack_size.z);
-  //   printf("ratio:%d\n", ratio);
-  //   insertClack(&ma_h, clack, ratio);
-  // }
-  // if(ratio != 0){
-  //   // model_count++;
-  //   sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
-  //   fp1 = fopen(fn1, "wb");
-  //   fprintf(fp1, "sp.x,sp.y,sp.z,ln.x,ln.y,ln,z\n");
-  //   // for(int i = 0; i < clack_count; i++){
-  //   //   fprintf(fp1, "%d,%d,%d,", clack[i].sp.x, clack[i].sp.y, clack[i].sp.z, clack[i].range.x,clack[i].range.y, clack[i].range.z);
-  //   // }
-  // }
-
-  //ファイル名出力
-  // fp1 = fopen(fn1, "wb");
-
-  // double test;
-  // int ratio = 10;
-  // int model_count = 0;
-  // sprintf(fn1, "./clack/ratio%d/clack_%d.csv", ratio, (model_count + 1));
-  // printf("%.*s\n", (int) sizeof fn1, fn1);
-  // fp1 = fopen(fn1, "w");
-
-  // 0 padding
-  ZeroT<<<ZeroTBlocks,threadsPerBlock>>>(aft_d, ran_d);
-  ZeroTxy<<<ZeroTxyBlocks,threadsPerBlock>>>(aft_d, ran_d);
-  ZeroTyz<<<ZeroTyzBlocks,threadsPerBlock>>>(aft_d, ran_d);
-  ZeroTzx<<<ZeroTzxBlocks,threadsPerBlock>>>(aft_d, ran_d);
-  ZeroVx<<<ZeroVxBlocks,threadsPerBlock>>>(aft_d, ran_d);
-  ZeroVy<<<ZeroVyBlocks,threadsPerBlock>>>(aft_d, ran_d);
-  ZeroVz<<<ZeroVzBlocks,threadsPerBlock>>>(aft_d, ran_d);
+  ZeroT<<<ZeroTBlocks,threadsPerBlock>>>(aft_d->sa, ran_d);
+  ZeroTxy<<<ZeroTxyBlocks,threadsPerBlock>>>(aft_d->ta, ran_d);
+  ZeroTyz<<<ZeroTyzBlocks,threadsPerBlock>>>(aft_d->ta, ran_d);
+  ZeroTzx<<<ZeroTzxBlocks,threadsPerBlock>>>(aft_d->ta, ran_d);
+  ZeroVx<<<ZeroVxBlocks,threadsPerBlock>>>(aft_d->va, ran_d);
+  ZeroVy<<<ZeroVyBlocks,threadsPerBlock>>>(aft_d->va, ran_d);
+  ZeroVz<<<ZeroVzBlocks,threadsPerBlock>>>(aft_d->va, ran_d);
   cudaDeviceSynchronize();
   FILE *fp;
-  char fn1[256];
-  sprintf(fn1, "./clack.csv");
-  fp = fopen(fn1, "w");
+  char fn[256];
+  sprintf(fn, "./clack.csv");
+  fp = fopen(fn, "w");
+
+
+  // ImpulseArr *ipa_h;
+  // int sizetxx = ran_h.sr.Txx.x * ran_h.sr.Txx.y * ran_h.sr.Txx.z;
+  // int sizetxy = ran_h.tr.Txy.x * ran_h.tr.Txy.y * ran_h.tr.Txy.z;
+  // int sizevx  = ran_h.vr.Vx.x * ran_h.vr.Vx.y * ran_h.vr.Vx.z;
+  // ipa_h = (ImpulseArr*)malloc(size * sizeof(ImpulseArr));
+  // printf("%d\n", id);
+  // printMedArr<<<1,1>>>(ma_d, ran_d);
+  BefAft *aft_h;
+  aft_h = allocateHostBefAft(ran_h);
+  // int out1id = out_h[0].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[0].y * ran_h.sr.Txx.x + out_h[0].x;
+  // int out2id = out_h[1].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[1].y * ran_h.sr.Txx.x + out_h[1].x;
+
+  // v
+  // int out1idvx = out_h[0].z * ran_h.vr.Vx.x * ran_h.vr.Vx.y + out_h[0].y * ran_h.vr.Vx.x + out_h[0].x;
+  // int out2idvx = out_h[1].z * ran_h.vr.Vx.x * ran_h.vr.Vx.y + out_h[1].y * ran_h.vr.Vx.x + out_h[1].x;
+  // int out1idvy = out_h[0].z * ran_h.vr.Vy.x * ran_h.vr.Vy.y + out_h[0].y * ran_h.vr.Vy.x + out_h[0].x;
+  // int out2idvy = out_h[1].z * ran_h.vr.Vy.x * ran_h.vr.Vy.y + out_h[1].y * ran_h.vr.Vy.x + out_h[1].x;
+  // int out1idvz = out_h[0].z * ran_h.vr.Vz.x * ran_h.vr.Vz.y + out_h[0].y * ran_h.vr.Vz.x + out_h[0].x;
+  // int out2idvz = out_h[1].z * ran_h.vr.Vz.x * ran_h.vr.Vz.y + out_h[1].y * ran_h.vr.Vz.x + out_h[1].x;
+
+  // t
+  int out1idtx = out_h[0].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[0].y * ran_h.sr.Txx.x + out_h[0].x;
+  int out2idtx = out_h[1].z * ran_h.sr.Txx.x * ran_h.sr.Txx.y + out_h[1].y * ran_h.sr.Txx.x + out_h[1].x;
+  int out1idty = out_h[0].z * ran_h.sr.Tyy.x * ran_h.sr.Tyy.y + out_h[0].y * ran_h.sr.Tyy.x + out_h[0].x;
+  int out2idty = out_h[1].z * ran_h.sr.Tyy.x * ran_h.sr.Tyy.y + out_h[1].y * ran_h.sr.Tyy.x + out_h[1].x;
+  int out1idtz = out_h[0].z * ran_h.sr.Tzz.x * ran_h.sr.Tzz.y + out_h[0].y * ran_h.sr.Tzz.x + out_h[0].x;
+  int out2idtz = out_h[1].z * ran_h.sr.Tzz.x * ran_h.sr.Tzz.y + out_h[1].y * ran_h.sr.Tzz.x + out_h[1].x;
   for (int t_h = 0; t_h < tmax_h; t_h++) {
     // printf("ok\n");
     createImpulse<<<1,1>>>(ipa_d, ip_d, dif_d, ran_d, innum_h, t_h);////////
@@ -173,18 +201,48 @@ int main(void) {
     Vel(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);//////////////////////////////
     Sig(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, ipa_d, threads);
     Tau(aft_d, bef_d, ma_d, dif_d, ran_d, &ran_h, threads);
-    Acceleration<<<1,1>>>(acc_d, aft_d->va, bef_d->va, dif_d, out_d, ran_d, outnum_h);
-    DimD3DeviceToHost(acc_h, acc_d, outnum_h);
-    swapBefAft(aft_d, bef_d, &ran_h, ran_d, threads);
+
+    // // acc
+    // Acceleration<<<1,1>>>(acc_d, aft_d->va, bef_d->va, dif_d, out_d, ran_d, outnum_h);
+    // cudaDeviceSynchronize();
+    // DimD3DeviceToHost(acc_h, acc_d, outnum_h);
+    // for(int i = 0; i < outnum_h; i++) {
+    //   fprintf(fp, "%lf,%lf,%lf,", acc_h[i].x, acc_h[i].y, acc_h[i].z);
+    // }
+    // fprintf(fp, "\n");
+
+    // // v
+    // BefAftDeviceToHost(aft_h, aft_d, ran_h);
+    // fprintf(fp, "%lf,%lf,%lf,%lf,%lf,%lf\n",aft_h->va.Vx[out1idvx],aft_h->va.Vy[out1idvy],aft_h->va.Vz[out1idvz],
+    //                                         aft_h->va.Vx[out2idvx],aft_h->va.Vy[out2idvy],aft_h->va.Vz[out2idvz]);
+
+    // // T
+    // BefAftDeviceToHost(aft_h, aft_d, ran_h);
+    // for(int i = 0; i < outnum_h; i++) {
+    //   fprintf(fp, "%lf,%lf,%lf,", aft_h->sa.Txx[out1idtx + i], aft_h->sa.Tyy[out1idtx + i], aft_h->sa.Tzz[out1idtx + i]);
+    // }
+    BefAftDeviceToHost(aft_h, aft_d, ran_h);
     for(int i = 0; i < outnum_h; i++) {
-      fprintf(fp, "%.6lf,%.6lf,%.6lf,", acc_h[i].x, acc_h[i].y, acc_h[i].z);
+      fprintf(fp, "%lf,%lf,%lf,", aft_h->ta.Txy[out1idtx + i], aft_h->ta.Tyz[out1idtx + i], aft_h->ta.Tzx[out1idtx + i]);
     }
     fprintf(fp, "\n");
+    // fprintf(fp, "%lf,%lf,%lf,%lf,%lf,%lf\n",aft_h->sa.Txx[out1idtx],aft_h->sa.Tyy[out1idty],aft_h->sa.Tzz[out1idtz],
+    //                                         aft_h->sa.Txx[out2idtx],aft_h->sa.Tyy[out2idty],aft_h->sa.Tzz[out2idtz]);
+
+    // png
+    // BefAftDeviceToHost(aft_h, aft_d, ran_h);
+    // create_png(ran_h.vr.Vz, aft_h->va.Vz, ip_h[0].in.z, t_h);
+
+    swapBefAft(aft_d, bef_d, &ran_h, ran_d, threads);
     progressBar(t_h, tmax_h);
   }
   fclose(fp);
   printf("\nloop end.\n");
+  clock_t end = clock();
+  double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
+  printf("実行時間: %lf 秒\n", time_spent);
+  printf("実行時間: %lf 分\n", time_spent / 60);
   return 0;
 }
 
@@ -202,4 +260,3 @@ void progressBar(int now, int max) {
   printf("] %.2f%%\r", progress * 100);
   fflush(stdout);
 }
-

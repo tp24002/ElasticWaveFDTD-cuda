@@ -156,3 +156,4 @@ typedef struct {
 typedef enum { E_AIR = 0, E_CON, E_M_END } E_Mednum;
 typedef enum { E_SINE = 100, E_RCOS } E_KIND_OF_IP;
 typedef enum { E_HOLE = 200, E_CLACK } E_KIND_OF_DEFECT;
+typedef enum { P_Txx = 300, P_Tyy, P_Tzz, P_Txy, P_Tyz, P_Tzx, P_Vx, P_Vy, P_Vz } P_parameter;
