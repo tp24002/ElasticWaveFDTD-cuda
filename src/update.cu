@@ -11,7 +11,6 @@
 #include "../header/memory.h"
 
 // 垂直応力
-
 // 垂直応力更新並列関数
 __global__ void TxxUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva, MedArr *ma, Diff *dif, Range *ran, ImpulseArr *ipa) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
