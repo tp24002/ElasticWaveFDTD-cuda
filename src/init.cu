@@ -82,24 +82,15 @@ void initPml(Pml *pml, Medium *med, Diff dif) {
 }
 
 void initRange(Range *ran, DimI3 region, Pml pml) {
-  // initDimI3(&ran->sr.Txx, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initDimI3(&ran->sr.Tyy, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initDimI3(&ran->sr.Tzz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initDimI3(&ran->tr.Txy, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
-  // initDimI3(&ran->tr.Tyz, x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z - 1);
-  // initDimI3(&ran->tr.Tzx, x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
-  // initDimI3(&ran->vr.Vx , x + pml.pl1.x + pml.pl2.x - 1, y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z    );
-  // initDimI3(&ran->vr.Vy , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y - 1, z + pml.pl1.z + pml.pl2.z    );
-  // initDimI3(&ran->vr.Vz , x + pml.pl1.x + pml.pl2.x    , y + pml.pl1.y + pml.pl2.y    , z + pml.pl1.z + pml.pl2.z - 1);
-  initDimI3(&ran->sr.Txx, region.x + pml.pl1.x + pml.pl2.x + 2    , region.y + pml.pl1.y + pml.pl2.y + 2    , region.z + pml.pl1.z + pml.pl2.z + 2);
-  initDimI3(&ran->sr.Tyy, region.x + pml.pl1.x + pml.pl2.x + 2    , region.y + pml.pl1.y + pml.pl2.y + 2    , region.z + pml.pl1.z + pml.pl2.z + 2);
-  initDimI3(&ran->sr.Tzz, region.x + pml.pl1.x + pml.pl2.x + 2    , region.y + pml.pl1.y + pml.pl2.y + 2    , region.z + pml.pl1.z + pml.pl2.z + 2);
-  initDimI3(&ran->tr.Txy, region.x + pml.pl1.x + pml.pl2.x + 1 + 2, region.y + pml.pl1.y + pml.pl2.y + 1 + 2, region.z + pml.pl1.z + pml.pl2.z + 2);
-  initDimI3(&ran->tr.Tyz, region.x + pml.pl1.x + pml.pl2.x + 2    , region.y + pml.pl1.y + pml.pl2.y + 1 + 2, region.z + pml.pl1.z + pml.pl2.z + 1 + 2);
-  initDimI3(&ran->tr.Tzx, region.x + pml.pl1.x + pml.pl2.x + 1 + 2, region.y + pml.pl1.y + pml.pl2.y + 2    , region.z + pml.pl1.z + pml.pl2.z + 1 + 2);
-  initDimI3(&ran->vr.Vx , region.x + pml.pl1.x + pml.pl2.x + 1 + 2, region.y + pml.pl1.y + pml.pl2.y + 2    , region.z + pml.pl1.z + pml.pl2.z + 2);
-  initDimI3(&ran->vr.Vy , region.x + pml.pl1.x + pml.pl2.x + 2    , region.y + pml.pl1.y + pml.pl2.y + 1 + 2, region.z + pml.pl1.z + pml.pl2.z + 2);
-  initDimI3(&ran->vr.Vz , region.x + pml.pl1.x + pml.pl2.x + 2    , region.y + pml.pl1.y + pml.pl2.y + 2    , region.z + pml.pl1.z + pml.pl2.z + 1 + 2);
+  initDimI3(&ran->sr.Txx, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z);
+  initDimI3(&ran->sr.Tyy, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z);
+  initDimI3(&ran->sr.Tzz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z);
+  initDimI3(&ran->tr.Txy, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z);
+  initDimI3(&ran->tr.Tyz, region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z + 1);
+  initDimI3(&ran->tr.Tzx, region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
+  initDimI3(&ran->vr.Vx , region.x + pml.pl1.x + pml.pl2.x + 1, region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z);
+  initDimI3(&ran->vr.Vy , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y + 1, region.z + pml.pl1.z + pml.pl2.z);
+  initDimI3(&ran->vr.Vz , region.x + pml.pl1.x + pml.pl2.x    , region.y + pml.pl1.y + pml.pl2.y    , region.z + pml.pl1.z + pml.pl2.z + 1);
 } 
 
 void initRandom(Object con, DimI3 *clack, int ratio) {

@@ -14,9 +14,9 @@
 
 // 垂直応力更新並列関数
 __global__ void TxxUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva, MedArr *ma, Diff *dif, Range *ran, ImpulseArr *ipa) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
-  int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
-  int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
 
   int txxi = ran->sr.Txx.x, txxj = ran->sr.Txx.y, txxk = ran->sr.Txx.z;
   int vxi = ran->vr.Vx.x, vxj = ran->vr.Vx.y;
@@ -49,9 +49,9 @@ __global__ void TxxUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva
 
 // 垂直応力更新並列関数
 __global__ void TyyUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva, MedArr *ma, Diff *dif, Range *ran, ImpulseArr *ipa) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
-  int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
-  int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
 
   int tyyi = ran->sr.Tyy.x, tyyj = ran->sr.Tyy.y, tyyk = ran->sr.Tyy.z;
   int vxi = ran->vr.Vx.x, vxj = ran->vr.Vx.y;
@@ -85,9 +85,9 @@ __global__ void TyyUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva
 
 // 垂直応力更新並列関数
 __global__ void TzzUpdate(SigArr aftsa, VelArr aftva, SigArr befsa, VelArr befva, MedArr *ma, Diff *dif, Range *ran, ImpulseArr *ipa) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
-  int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
-  int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
 
   int tzzi = ran->sr.Tzz.x, tzzj = ran->sr.Tzz.y, tzzk = ran->sr.Tzz.z;
   int vxi = ran->vr.Vx.x, vxj = ran->vr.Vx.y;
@@ -155,26 +155,10 @@ void Txx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   dim3 UpdateBlocks((Txximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Txxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Txxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroXYBlocks((Txximax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txxjmax     + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroYZBlocks((Txxjmax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txxkmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroZXBlocks((Txxkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txximax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  dim3 DirectionalAddBlocks((Txximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Txxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
-                            (Txxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // Txx更新式
   TxxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->sa, aft_d->va, bef_d->sa, bef_d->va, ma_d, dif_d, ran_d, ipa_d);
-  // 0 padding
-  // ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d, 'X');
-  // ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d, 'X');
-  // ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran_d, 'X');
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Txx zero  : %s\n", cudaGetErrorString(err));
-  //全方向加算
-  // DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->sa, ipa_d, ran_d, 'X');
-  // cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Txx add   : %s\n", cudaGetErrorString(err));
+  // printf("CUDA kernel error Txx update: %s\n", cudaGetErrorString(cudaGetLastError()));
 
 }
 // Tyyクラス的な(Blocks大丈夫かな？)
@@ -188,26 +172,10 @@ void Tyy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   dim3 UpdateBlocks((Tyyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Tyyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Tyykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroXYBlocks((Tyyimax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyyjmax     + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroYZBlocks((Tyyjmax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyykmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroZXBlocks((Tyykmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyyimax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  dim3 DirectionalAddBlocks((Tyyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Tyyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                            (Tyykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // Tyy更新式
   TyyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->sa, aft_d->va, bef_d->sa, bef_d->va, ma_d, dif_d, ran_d, ipa_d);
-  // 0 padding
-  // ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
-  // ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
-  // ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tyy zero  : %s\n", cudaGetErrorString(err));
-  // 全方向加算
-  // DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->sa, ipa_d, ran_d, check);
-  // cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tyy add   : %s\n", cudaGetErrorString(err));
+  // printf("CUDA kernel error Tyy update: %s\n", cudaGetErrorString(cudaGetLastError()));
 }
 // Tzzクラス的な(Blocks大丈夫かな？)
 void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, ImpulseArr *ipa_d, DimI3 threads) {
@@ -220,26 +188,10 @@ void Tzz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
   dim3 UpdateBlocks((Tzzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Tzzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Tzzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroXYBlocks((Tzzimax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzzjmax     + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroYZBlocks((Tzzjmax     + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzzkmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroZXBlocks((Tzzkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzzimax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  dim3 DirectionalAddBlocks((Tzzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Tzzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                            (Tzzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   // Tzzの更新式
   TzzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->sa, aft_d->va, bef_d->sa, bef_d->va, ma_d, dif_d, ran_d, ipa_d);
-  // 0 padding
-  // ZeroT_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
-  // ZeroT_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
-  // ZeroT_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran_d, check);
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tzz zero  : %s\n", cudaGetErrorString(err));
-  // 全方向加算
-  // DirectionalAdd<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->sa, ipa_d, ran_d, check);
-  // cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tzz add   : %s\n", cudaGetErrorString(err));
+  // printf("CUDA kernel error Tzz update: %s\n", cudaGetErrorString(cudaGetLastError()));
  
 }
 // 垂直応力計算(main呼び出し関数)
@@ -255,7 +207,7 @@ void Sig(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 __global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
-  int k = blockIdx.z * blockDim.z + threadIdx.z + 1; // 始点を+1
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
 
   // int imax = ran->tr.Txy.x, jmax = ran->tr.Txy.y, kmax = ran->tr.Txy.z;
   double Hzetadx, Hzetady, Hmu, Hgamma;
@@ -263,7 +215,7 @@ __global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
   int txxi = ran->sr.Txx.x, txxj = ran->sr.Txx.y;
   int vxi = ran->vr.Vx.x, vxj = ran->vr.Vx.y;
   int vyi = ran->vr.Vy.x, vyj = ran->vr.Vy.y;
-  if (i < txyi && j < txyj && k < txyk) {
+  if (i < (txyi - 1)&& j < (txyj - 1) && k < txyk) {
     // 各インデックスの計算
     int idtxy = k * txyi * txyj + j * txyi + i;
 
@@ -301,7 +253,7 @@ __global__ void TxyUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
 
 // せん断応力更新関数
 __global__ void TyzUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
@@ -311,7 +263,7 @@ __global__ void TyzUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
   int txxi = ran->sr.Txx.x, txxj = ran->sr.Txx.y;
   int vyi = ran->vr.Vy.x, vyj = ran->vr.Vy.y;
   int vzi = ran->vr.Vz.x, vzj = ran->vr.Vz.y;
-  if (i < tyzi && j < tyzj && k < tyzk) {
+  if (i < tyzi && j < (tyzj - 1) && k < (tyzk - 1)) {
     // 各インデックスの計算
     int idtyz = k * tyzi * tyzj + j * tyzi + i;
 
@@ -350,7 +302,7 @@ __global__ void TyzUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
 // せん断応力更新関数
 __global__ void TzxUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
-  int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
   double Hzetadx, Hzetadz, Hmu, Hgamma;
@@ -358,7 +310,7 @@ __global__ void TzxUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
   int txxi = ran->sr.Txx.x, txxj = ran->sr.Txx.y;
   int vxi = ran->vr.Vx.x, vxj = ran->vr.Vx.y;
   int vzi = ran->vr.Vz.x, vzj = ran->vr.Vz.y;
-  if (i < tzxi && j < tzxj && k < tzxk) {
+  if (i < (tzxi - 1) && j < tzxj && k < (tzxk - 1)) {
     // 各インデックスの計算
     // 求めるTzx
     int idtzx  = k * tzxi * tzxj + j * tzxi + i;
@@ -396,77 +348,37 @@ __global__ void TzxUpdate(TauArr aftta, VelArr aftva, TauArr befta, VelArr befva
 
 // Txyクラス的な
 void Txy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
-  // cudaError_t err;
   int Txyimax = ran_h->tr.Txy.x, Txyjmax = ran_h->tr.Txy.y, Txykmax = ran_h->tr.Txy.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Txyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Txyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Txykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroXYBlocks((Txyimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Txyjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  dim3 DirectionalAddBlocks((Txyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Txyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                            (Txykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                    
+                    (Txykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                   
   TxyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->ta, aft_d->va, bef_d->ta, bef_d->va, ma_d, dif_d, ran_d);
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Txy update: %s\n", cudaGetErrorString(err));
-  // ZeroTxy<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d);
   cudaDeviceSynchronize();
 
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Txy zero  : %s\n", cudaGetErrorString(err));
-  // DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->ta, ran_d, 'Z');
-  // cudaDeviceSynchronize();
-
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Txy add   : %s\n", cudaGetErrorString(err));
+  // printf("CUDA kernel error Txy update: %s\n", cudaGetErrorString(cudaGetLastError()));
 }
 // Tyzクラス的な
 void Tyz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
-  // cudaError_t err;
   int Tyzimax = ran_h->tr.Tyz.x, Tyzjmax = ran_h->tr.Tyz.y, Tyzkmax = ran_h->tr.Tyz.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Tyzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Tyzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Tyzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroYZBlocks((Tyzjmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tyzkmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  dim3 DirectionalAddBlocks((Tyzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Tyzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                            (Tyzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                    
   TyzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->ta, aft_d->va, bef_d->ta, bef_d->va, ma_d, dif_d, ran_d);
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tyz update: %s\n", cudaGetErrorString(err));
-  // ZeroTyz<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d);
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tyz zero  : %s\n", cudaGetErrorString(err));
-  // DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->ta, ran_d, 'X');
-  // cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tyz add   : %s\n", cudaGetErrorString(err));
+  // printf("CUDA kernel error Tyz update: %s\n", cudaGetErrorString(cudaGetLastError()));
 }
 // Tzxクラス的な
 void Tzx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
-  // cudaError_t err;
   int Tzximax = ran_h->tr.Tzx.x, Tzxjmax = ran_h->tr.Tzx.y, Tzxkmax = ran_h->tr.Tzx.z;
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Tzximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Tzxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Tzxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroZXBlocks((Tzxkmax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, (Tzximax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);   
-  dim3 DirectionalAddBlocks((Tzximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Tzxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
-                            (Tzxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                  
   TzxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->ta, aft_d->va, bef_d->ta, bef_d->va, ma_d, dif_d, ran_d);
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tzx update: %s\n", cudaGetErrorString(err));
-  // ZeroTzx<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran_d);
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tzx zero  : %s\n", cudaGetErrorString(err));
-  // DirectionalAddT<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->ta, ran_d, 'Y');
-  // cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Tzx add   : %s\n", cudaGetErrorString(err));
+  // printf("CUDA kernel error Tzx update: %s\n", cudaGetErrorString(cudaGetLastError()));
 
 }
 // せん断応力計算(main呼び出し関数)
@@ -480,7 +392,7 @@ void Tau(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, 
 
 // 粒子速度更新関数
 __global__ void VxUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta, MedArr *ma, Diff *dif, Range *ran) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
@@ -489,7 +401,7 @@ __global__ void VxUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
   int txxi = ran->sr.Txx.x, txxj = ran->sr.Txx.y;
   int txyi = ran->tr.Txy.x, txyj = ran->tr.Txy.y;
   int tzxi = ran->tr.Tzx.x, tzxj = ran->tr.Tzx.y;
-  if(i < vxi && j < vxj && k < vxk) {
+  if(i < (vxi - 1) && j < vxj && k < vxk) {
     int idvx   = k * vxi * vxj + j * vxi + i;
     int idtxx  = k * txxi * txxj + j * txxi + i;
     int idtxxi = k * txxi * txxj + j * txxi + (i - 1);
@@ -519,7 +431,7 @@ __global__ void VxUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
 // 粒子速度更新関数
 __global__ void VyUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
-  int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
   int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
 
   double Azetayx, Azetayy, Azetayz, Arho;
@@ -527,7 +439,7 @@ __global__ void VyUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
   int tyyi = ran->sr.Tyy.x, tyyj = ran->sr.Tyy.y;
   int txyi = ran->tr.Txy.x, txyj = ran->tr.Txy.y;
   int tyzi = ran->tr.Tyz.x, tyzj = ran->tr.Tyz.y;
-  if (i < vyi && j < vyj && k < vyk) {
+  if (i < vyi && j < (vyj - 1) && k < vyk) {
     // 各インデックスの計算
     int idvy   = k * vyi * vyj + j * vyi + i;
     int idtyy  = k * tyyi * tyyj + j * tyyi + i;
@@ -563,17 +475,14 @@ __global__ void VyUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta,
 __global__ void VzUpdate(VelArr aftva, VelArr befva, SigArr befsa, TauArr befta, MedArr *ma, Diff *dif, Range *ran) {
   int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
   int j = blockIdx.y * blockDim.y + threadIdx.y + 1;
-  int k = blockIdx.z * blockDim.z + threadIdx.z + 1;
-
-  // int imax = ran->vr.Vz.x, jmax = ran->vr.Vz.y, kmax = ran->vr.Vz.z;
-  // int imax = ran->sr.Txx.x, jmax = ran->sr.Txx.y, kmax = ran->sr.Txx.z;
+  int k = blockIdx.z * blockDim.z + threadIdx.z;
 
   double Azetazx, Azetazy, Azetazz, Arho;
   int vzi = ran->vr.Vz.x, vzj = ran->vr.Vz.y, vzk = ran->vr.Vz.z;
   int tzzi = ran->sr.Tzz.x, tzzj = ran->sr.Tzz.y;
   int tzxi = ran->tr.Tzx.x, tzxj = ran->tr.Tzx.y;
   int tyzi = ran->tr.Tyz.x, tyzj = ran->tr.Tyz.y;
-  if(i < vzi && j < vzj && k < vzk) {
+  if(i < vzi && j < vzj && k < (vzk - 1)) {
     // 1D indexing for 3D arrays
     int idvz   = k * vzi * vzj + j * vzi + i;
     int idtzz  = k * tzzi * tzzj + j * tzzi + i;
@@ -608,27 +517,10 @@ void Vx(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   dim3 UpdateBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Vxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Vxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroXYBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-  //                   (Vxjmax - 1 + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroXZBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-  //                   (Vxkmax + threadsPerBlock.y - 1) / threadsPerBlock.y);  
-  dim3 DirectionalAddBlocks((Vximax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Vxjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
-                            (Vxkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   VxUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->va, bef_d->va, bef_d->sa, bef_d->ta, ma_d, dif_d, ran_d);
-  // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vx  update: %s\n", cudaGetErrorString(err));
-  // ZeroVx_XY<<<ZeroXYBlocks, threadsPerBlock>>>(aft_d, ran_d);
-  // ZeroVx_XZ<<<ZeroXZBlocks, threadsPerBlock>>>(aft_d, ran_d);
   
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vx  zero  : %s\n", cudaGetErrorString(err));
-  // DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->va, ran_d, 'X');
-  // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vx  add   : %s\n", cudaGetErrorString(err));
-  // cudaDeviceSynchronize();
-
+  // if(cudaGetLastError() != "no error") printf("CUDA kernel error Vx update: %s\n", cudaGetErrorString(cudaGetLastError()));
 }
 // Vyクラス的な
 void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
@@ -639,28 +531,10 @@ void Vy(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   dim3 UpdateBlocks((Vyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Vyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
                     (Vykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
-  // dim3 ZeroYXBlocks((Vyimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-  //                   (Vyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroYZBlocks((Vyjmax + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-  //                   (Vykmax + threadsPerBlock.y - 1) / threadsPerBlock.y);  
-  dim3 DirectionalAddBlocks((Vyimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Vyjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
-                            (Vykmax + threadsPerBlock.z - 1) / threadsPerBlock.z);
   VyUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->va, bef_d->va, bef_d->sa, bef_d->ta, ma_d, dif_d, ran_d);
-  // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vy  update: %s\n", cudaGetErrorString(err));
-  // ZeroVy_YX<<<ZeroYXBlocks, threadsPerBlock>>>(aft_d, ran_d);
-  // ZeroVy_YZ<<<ZeroYZBlocks, threadsPerBlock>>>(aft_d, ran_d);
- 
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vy  zero  : %s\n", cudaGetErrorString(err));
+  // printf("CUDA kernel error Vy update: %s\n", cudaGetErrorString(cudaGetLastError()));
 
-  //全方向加算
-  // DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->va, ran_d, 'Y');
-  // cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vy  add   : %s\n", cudaGetErrorString(err));
-  // cudaDeviceSynchronize();
 }
 // Vzクラス的な
 void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
@@ -670,29 +544,12 @@ void Vz(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, R
   dim3 threadsPerBlock(threads.x, threads.y, threads.z); // 1ブロックあたりのスレッド数
   dim3 UpdateBlocks((Vzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
                     (Vzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y,
-                    (Vzkmax + threadsPerBlock.z - 1)     / threadsPerBlock.z);
-  // dim3 ZeroZXBlocks((Vzimax - 1 + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-  //                   (Vzkmax + threadsPerBlock.y - 1) / threadsPerBlock.y);
-  // dim3 ZeroZYBlocks((Vzjmax + threadsPerBlock.x - 1) / threadsPerBlock.x, 
-  //                   (Vzkmax + threadsPerBlock.y - 1) / threadsPerBlock.y);  
-  dim3 DirectionalAddBlocks((Vzimax + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                            (Vzjmax + threadsPerBlock.y - 1) / threadsPerBlock.y, 
-                            (Vzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                    
+                    (Vzkmax + threadsPerBlock.z - 1) / threadsPerBlock.z);                
   VzUpdate<<<UpdateBlocks, threadsPerBlock>>>(aft_d->va, bef_d->va, bef_d->sa, bef_d->ta, ma_d, dif_d, ran_d);
 
-  // cudaError_t err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vz  update: %s\n", cudaGetErrorString(err));
-  // ZeroVz_ZX<<<ZeroZXBlocks, threadsPerBlock>>>(aft_d, ran_d);
-  // ZeroVz_ZY<<<ZeroZYBlocks, threadsPerBlock>>>(aft_d, ran_d);
- 
   cudaDeviceSynchronize();
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vz  zero  : %s\n", cudaGetErrorString(err));
-  //全方向加算
-  // DirectionalAddV<<<DirectionalAddBlocks, threadsPerBlock>>>(aft_d->va, ran_d, 'Z');
-  // err = cudaGetLastError(); // カーネル呼び出し後にエラーチェック
-  // printf("CUDA kernel error Vz  add   : %s\n", cudaGetErrorString(err));
-  // cudaDeviceSynchronize();
+  // printf("CUDA kernel error Vz update: %s\n", cudaGetErrorString(cudaGetLastError()));
+
 }
 //粒子速度計算
 void Vel(BefAft *aft_d, BefAft *bef_d, MedArr *ma_d, Diff *dif_d, Range *ran_d, Range *ran_h, DimI3 threads) {
